@@ -1,7 +1,7 @@
 # Installation steps
 1. Create conda env
 ```
-conda env create -n dlp python=3.10.8
+conda create -n dlp python=3.10.8; conda activate dlp
 ```
 2. Install PyTorch
 ```
@@ -15,9 +15,9 @@ pip install -r requirements.txt
 ```
 pip install blosc; cd babyai; pip install -e .; cd ..
 ```
-5. Install gym_minigrid
+5. Install gym-minigrid
 ```
-cd gym_minigrid; pip install -e.; cd ..
+cd gym-minigrid; pip install -e.; cd ..
 ```
 6. Install Accelerate
 ```
@@ -25,5 +25,5 @@ cd v0.13.2/accelerate-0.13.2; pip install -e .; cd ..
 ```
 7. Install Lamorel
 ```
-cd language-models-fo-rl/lamorel; pip install -e .; cd ../..
+cd language-models-for-rl/lamorel; pip install -e .; cd ../..
 ```
