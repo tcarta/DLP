@@ -54,7 +54,7 @@ def reward_function(subgoal_proba=None, reward=None, policy_value=None, llm_0=No
         return [0, 0]
 
 
-# TODO think about a corect value for the beta of the reward shapping part
+# TODO think about a correct value for the beta of the reward shaping part
 def reward_function_shapped(subgoal_proba=None, reward=None, policy_value=None, llm_0=None):
     if reward > 0:
         return [20 * reward - np.log(subgoal_proba / policy_value), -np.log(subgoal_proba / policy_value)]
@@ -300,7 +300,7 @@ def main(config_args):
         env = gym.make(name_env)
         env.seed(100 * seed + i)
         envs.append(env)
-        if config_args.rl_script_args.size_action_space == 3:
+        if config_args.rl_script_args.size_action_space == 3:  # TODO update later to make it more general
             subgoals.append(["turn left", "turn right", "go forward"])
 
         elif config_args.rl_script_args.size_action_space == 6:

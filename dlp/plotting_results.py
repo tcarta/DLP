@@ -171,13 +171,14 @@ def plot_grad_norm_average(*args, **kwargs):
 
 # ####################### Performance function of the size of the LLM ######################## #
 
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xxl_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
           '.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
           '.*GTL-PPO-NoPre.*']
-labels = ['FLAN-T5-large', 'FLAN-T5-small', 'Classic-A2C']
+labels = ['FLAN-T5-xxl', 'FLAN-T5-large', 'FLAN-T5-small', 'Classic-A2C']
 limits = 400000
-colors = ['tab:blue', 'tab:orange', 'tab:green']
-# plot_average(df, regexs, labels, limits, colors)
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey']
+plot_average(df, regexs, labels, limits, colors)
 # plot_sucess_rate_average(df, regexs, labels, limits, colors)
 
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
@@ -247,7 +248,7 @@ regexs = ['.*llm_gtlarge_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta
 labels = ['FLAN-T5-large 4 rooms', 'Classic A2C 4 rooms']
 limits = 200000
 colors = ['tab:blue', 'tab:orange']
-plot_average(df, regexs, labels, limits, colors)
+# plot_average(df, regexs, labels, limits, colors)
 
 # ####################### Mixt ######################## #
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
@@ -256,7 +257,7 @@ regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_s
 labels = ['FLAN-T5-large 1 room', 'FLAN-T5-large 2 rooms', 'FLAN-T5-large 4 rooms']
 limits = 200000
 colors = ['tab:blue', 'tab:orange', 'tab:grey']
-plot_average(df, regexs, labels, limits, colors)
+# plot_average(df, regexs, labels, limits, colors)
 
 # ####################### Performance function of the number of distractors ######################## #
 # ####################### LLM_large ######################## #

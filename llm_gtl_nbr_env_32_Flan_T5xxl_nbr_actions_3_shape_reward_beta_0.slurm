@@ -15,14 +15,13 @@
 #SBATCH --array=1-2
 
 module purge
-module load cpuarch/amd
 module load python/3.8.2
 conda activate dlp
 
 chmod +x dlp/slurm/launcher.sh
 
 srun dlp/slurm/launcher.sh \
-                    rl_script_args.path=$WORK/code/DLP/dlp/main.py \
+                    rl_script_args.path=/gpfswork/rech/imi/ucy39hi/DLP/dlp/main.py \
                     rl_script_args.seed=${SLURM_ARRAY_TASK_ID} \
                     rl_script_args.number_envs=32 \
                     rl_script_args.size_action_space=3 \
@@ -36,5 +35,5 @@ srun dlp/slurm/launcher.sh \
                     lamorel_args.llm_args.minibatch_size=3 \
                     lamorel_args.accelerate_args.num_machines=4 \
                     lamorel_args.accelerate_args.num_processes=5 \
-                    --config-path=$WORK/code/DLP/dlp/configs \
+                    --config-path=/gpfswork/rech/imi/ucy39hi/DLP/dlp/configs \
                     --config-name=multi-node_slurm_cluster_config

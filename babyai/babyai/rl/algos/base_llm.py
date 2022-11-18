@@ -76,7 +76,7 @@ class BaseAlgo(ABC):
 
         self.obs_queue = [deque([], maxlen=3) for _ in range(self.num_procs)]
         self.acts_queue = [deque([], maxlen=2) for _ in range(self.num_procs)]
-        self.subgoals = subgoals  # TODO update later to make it more general
+        self.subgoals = subgoals
 
         shape = (self.num_frames_per_proc, self.num_procs)
 
@@ -137,10 +137,6 @@ class BaseAlgo(ABC):
                 obs += "{}".format(deque_actions[i])
         return head_prompt + g + obs
 
-    def get_actions_ranked(self, prompt, subgoals, lm_server):
-        # ranked the actions and return the scores
-        scores = lm_server.score(contexts=prompt, candidates=subgoals)
-        return scores
 
     def collect_experiences(self, debug=False):
         """Collects rollouts and computes advantages.
