@@ -624,6 +624,61 @@ class Level_GoToLarge(LevelGen):
             force_colors=True
         )
 
+class Level_GoToLargeOpen(LevelGen):
+    """
+    Go to an object, the object may be in another room. Many distractors.
+    """
+
+    def __init__(
+        self,
+        doors_open=True,
+        seed=None
+    ):
+        self.doors_open = doors_open
+        super().__init__(
+            seed=seed,
+            action_kinds=['goto'],
+            instr_kinds=['action'],
+            num_rows=2,
+            num_cols=2,
+            num_dists=8,
+            locked_room_prob=0,
+            locations=False,
+            unblocking=False,
+            implicit_unlock=False,
+            force_colors=True
+        )
+
+    def gen_mission(self):
+        if self._rand_float(0, 1) < self.locked_room_prob:
+            self.add_locked_room()
+
+        self.connect_all()
+
+        self.add_distractors(num_distractors=self.num_dists, all_unique=False)
+
+        # The agent must be placed after all the object to respect constraints
+        while True:
+            self.place_agent()
+            start_room = self.room_from_pos(*self.agent_pos)
+            # Ensure that we are not placing the agent in the locked room
+            if start_room is self.locked_room:
+                continue
+            break
+
+        # If no unblocking required, make sure all objects are
+        # reachable without unblocking
+        if not self.unblocking:
+            self.check_objs_reachable()
+
+        # Generate random instructions
+        self.instrs = self.rand_instr(
+            action_kinds=self.action_kinds,
+            instr_kinds=self.instr_kinds
+        )
+        # If requested, open all the doors
+        if self.doors_open:
+            self.open_all_doors()
 
 class Level_PutNextMedium(LevelGen):
     """
