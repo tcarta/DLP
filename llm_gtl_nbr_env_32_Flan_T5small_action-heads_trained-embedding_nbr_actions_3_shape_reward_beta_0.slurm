@@ -31,6 +31,7 @@ srun dlp/slurm/launcher.sh \
                     rl_script_args.saving_path_model=$SCRATCH/DLP/models \
                     rl_script_args.load_embedding=true \
                     rl_script_args.use_action_heads=true \
+                    lamorel_args.allow_subgraph_use_whith_gradient=false \
                     lamorel_args.llm_args.model_type=seq2seq \
                     lamorel_args.llm_args.model_path=/gpfsscratch/rech/imi/ucy39hi/saycan-scienceworld/llms/flan-t5-small \
                     lamorel_args.llm_args.pretrained=false \

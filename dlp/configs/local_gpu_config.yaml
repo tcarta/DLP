@@ -1,6 +1,6 @@
 lamorel_args:
   log_level: info
-  allow_subgraph_use_whith_gradient: false
+  allow_subgraph_use_whith_gradient: true
   distributed_setup_args:
     n_rl_processes: 1
     n_llm_processes: 1
@@ -25,7 +25,7 @@ rl_script_args:
   num_steps: 100
   max_episode_steps: 3
   simplification_str: easy
-  frames_per_proc: 40
+  frames_per_proc: 5
   reward_shaping_beta: 0
   discount: 0.99
   lr: 1e-6
@@ -46,4 +46,4 @@ rl_script_args:
   saving_path_model: '/home/tcarta/DLP/storage/models'
   name_environment: 'BabyAI-GoToMediumOpen-v0'
   load_embedding: false
-  use_action_heads: true
+  use_action_heads: false
