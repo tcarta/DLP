@@ -1,5 +1,6 @@
 lamorel_args:
   log_level: info
+  allow_subgraph_use_whith_gradient: false
   distributed_setup_args:
     n_rl_processes: 1
     n_llm_processes: 4
@@ -12,6 +13,7 @@ lamorel_args:
   llm_args:
     model_type: ???
     model_path: ???
+    pretrained: true
     model_parallelism_size: 1
     minibatch_size: 16
     synchronize_gpus_after_scoring: false
@@ -43,3 +45,5 @@ rl_script_args:
   name_experiment: ???
   name_model: ???
   saving_path_model: ???
+  load_embedding: false
+  use_action_heads: false

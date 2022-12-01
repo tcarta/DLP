@@ -1,5 +1,6 @@
 lamorel_args:
   log_level: info
+  allow_subgraph_use_whith_gradient: false
   distributed_setup_args:
     n_rl_processes: 1
     n_llm_processes: 1
@@ -11,6 +12,7 @@ lamorel_args:
   llm_args:
     model_type: seq2seq
     model_path: t5-small
+    pretrained: true
     model_parallelism_size: 1
     minibatch_size: 4
     synchronize_gpus_after_scoring: false
@@ -43,3 +45,5 @@ rl_script_args:
   name_model: 'T5small'
   saving_path_model: '/home/tcarta/DLP/storage/models'
   name_environment: 'BabyAI-GoToMediumOpen-v0'
+  load_embedding: false
+  use_action_heads: true

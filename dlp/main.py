@@ -4,6 +4,7 @@ This script run a simple agent in a BabyAI GoTo-Local environment.
 import os
 import csv
 import json
+from collections import OrderedDict
 
 import logging
 
@@ -33,19 +34,6 @@ from accelerate import Accelerator
 
 accelerator = Accelerator()
 
-
-def get_generated_sequence(lm_server):
-    # Something a bit like goal generation, takes in the room description, adds some
-    # an additional prompt and then gets a suggestion from the model.
-    promt_suffix = "\nThis is an example of what I could do here:"
-    prompt = 'example' + promt_suffix
-    print("Generating sequences from LLM")
-    _result = lm_server.generate(contexts=[prompt], max_length=512)
-    generated = _result[0][0]["text"].split('.')[0]
-
-    return generated
-
-
 # TODO add the value of the true reward *20 who should receive the final reward?
 def reward_function(subgoal_proba=None, reward=None, policy_value=None, llm_0=None):
     if reward > 0:
@@ -63,7 +51,6 @@ def reward_function_shapped(subgoal_proba=None, reward=None, policy_value=None, 
 
 
 class ValueModuleFn(BaseModuleFunction):
-
     def __init__(self, model_type):
         super().__init__()
         self._model_type = model_type
@@ -88,11 +75,35 @@ class ValueModuleFn(BaseModuleFunction):
         value = self.value_head_op(model_head.to(self.device))
         return value.cpu()
 
+class ActionHeadsModuleFn(BaseModuleFunction):
+    def __init__(self, model_type, action_space_size):
+        super().__init__()
+        self._model_type = model_type
+        self._action_space_size = action_space_size
+
+    def initialize(self):
+        llm_hidden_size = self.llm_config.to_dict()[self.llm_config.attribute_map['hidden_size']]
+        self.action_heads_op = torch.nn.Sequential(
+            torch.nn.Linear(llm_hidden_size, 1024),
+            torch.nn.Sigmoid(),
+            torch.nn.Linear(1024, 1024),
+            torch.nn.Sigmoid(),
+            torch.nn.Linear(1024, self._action_space_size)
+        ).to(self.device)
+
+    def forward(self, forward_outputs, minibatch, tokenized_context, **kwargs):
+        # Get encoder's representation
+        if self._model_type == "causal":
+            model_head = forward_outputs['hidden_states'][0][0, len(tokenized_context["input_ids"])-1, :]
+        else:
+            model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+
+        actions_score = self.action_heads_op(model_head)
+        return actions_score
+
 
 class Updater(BaseUpdater):
-
     def generate_prompt(self, subgoals):
-
         head_prompt = "Possible action of the agent:"
         for sg in subgoals:
             head_prompt += " {},".format(sg)
@@ -110,6 +121,16 @@ class Updater(BaseUpdater):
         return templeted_prompts
 
     def perform_update(self, contexts, candidates, _current_batch_ids, **kwargs):
+        # If asked, only do embedding weights loading
+        if "load_embedding" in kwargs and kwargs["load_embedding"] and not hasattr(self, "is_embedding_loaded"):
+            pretrained_weights = torch.load(kwargs["llm_path"] + "/pytorch_model.bin")
+            state_dict = OrderedDict({
+                k: v for k, v in pretrained_weights.items() if "embed" in k or "shared" in k # Warning: this may fail if the model shares other things than emebdding weights
+            })
+            self._llm_module.module._LLM_model.load_state_dict(state_dict, strict=False)
+            self.is_embedding_loaded = True
+            return {}
+
         if not hasattr(self, 'optimizer'):
             self.optimizer = torch.optim.Adam(self._llm_module.parameters(), kwargs["lr"],
                                               (kwargs["beta1"], kwargs["beta2"]),
@@ -120,9 +141,9 @@ class Updater(BaseUpdater):
             sb[k] = kwargs["exps"][k][_current_batch_ids]
 
         # Compute loss
-        output = self._llm_module(['__score', 'value'],
+        output = self._llm_module([kwargs["scoring_module_key"], 'value'],
                                   contexts=contexts, candidates=candidates, require_grad=True)
-        scores = torch.stack([_o["__score"] for _o in output])
+        scores = torch.stack([_o[kwargs["scoring_module_key"]] for _o in output])
         scores_max = torch.max(scores, dim=1)[0]
         values = torch.stack([_o["value"][0] for _o in output])
 
@@ -188,9 +209,9 @@ class Updater(BaseUpdater):
                 subgoals = [candidates[0] for i in range(6)]
 
                 # Avoid calling DDP model and get stuck gathering buffers from all LLMs
-                output = self._llm_module.module(['__score', 'value'],
+                output = self._llm_module.module([kwargs["scoring_module_key"], 'value'],
                                                  contexts=prompts, candidates=subgoals, require_grad=False)
-                scores = torch.stack([_o["__score"] for _o in output])
+                scores = torch.stack([_o[kwargs["scoring_module_key"]] for _o in output])
                 scores_max = torch.max(scores, dim=1)[0]
 
                 proba_dist = []
@@ -287,8 +308,20 @@ def run_agent(args, algo, id_expe):
 @hydra.main(config_path='config', config_name='config')
 def main(config_args):
     # lm server
+    custom_lamorel_module_functions = {
+        'value': ValueModuleFn(config_args.lamorel_args.llm_args.model_type)
+    }
+    if config_args.rl_script_args.use_action_heads:
+        custom_lamorel_module_functions['policy_head'] = ActionHeadsModuleFn(
+            config_args.lamorel_args.llm_args.model_type,
+            config_args.rl_script_args.size_action_space
+        )
+        lamorel_scoring_module_key = "policy_head"
+    else:
+        lamorel_scoring_module_key = "__score"
+
     lm_server = Caller(config_args.lamorel_args, custom_updater_class=Updater,
-                       custom_module_functions={'value': ValueModuleFn(config_args.lamorel_args.llm_args.model_type)})
+                       custom_module_functions=custom_lamorel_module_functions)
 
     # Env
     name_env = config_args.rl_script_args.name_environment
@@ -330,7 +363,13 @@ def main(config_args):
     if not os.path.exists(model_path):
         os.makedirs(model_path)
 
-    algo = babyai.rl.PPOAlgoLlm(envs, lm_server, config_args.lamorel_args.distributed_setup_args.n_llm_processes,
+    if not config_args.lamorel_args.llm_args.pretrained and config_args.rl_script_args.load_embedding:
+        lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                         [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                         load_embedding=True, llm_path=config_args.lamorel_args.llm_args.model_path)
+
+    algo = babyai.rl.PPOAlgoLlm(envs, lm_server, lamorel_scoring_module_key,
+                                config_args.lamorel_args.distributed_setup_args.n_llm_processes,
                                 config_args.rl_script_args.frames_per_proc,
                                 config_args.rl_script_args.discount, config_args.rl_script_args.lr,
                                 config_args.rl_script_args.beta1, config_args.rl_script_args.beta2,

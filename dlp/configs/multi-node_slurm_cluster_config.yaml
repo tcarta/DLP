@@ -46,3 +46,5 @@ rl_script_args:
   name_model: ???
   saving_path_model: ???
   name_environment: 'BabyAI-GoToLocal-v0'
+  load_embedding: false
+  use_action_heads: false

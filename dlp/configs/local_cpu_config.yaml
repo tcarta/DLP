@@ -1,5 +1,6 @@
 lamorel_args:
   log_level: info
+  allow_subgraph_use_whith_gradient: false
   distributed_setup_args:
     n_rl_processes: 1
     n_llm_processes: 1
@@ -14,6 +15,7 @@ lamorel_args:
   llm_args:
     model_type: causal
     model_path: distilgpt2
+    pretrained: true
     model_parallelism_size: 1
     minibatch_size: 4
 rl_script_args:
@@ -37,4 +39,6 @@ rl_script_args:
   saving_path_logs: '/home/tcarta/DLP/storage/logs'
   name_experiment: 'llm_gtl'
   saving_path_model: '/home/tcarta/DLP/storage/models'
+  load_embedding: false
+  use_action_heads: false
 
