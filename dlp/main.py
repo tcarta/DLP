@@ -99,7 +99,7 @@ class ActionHeadsModuleFn(BaseModuleFunction):
             model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
 
         actions_score = self.action_heads_op(model_head)
-        return actions_score
+        return actions_score.cpu()
 
 
 class Updater(BaseUpdater):
@@ -204,7 +204,7 @@ class Updater(BaseUpdater):
 
         # save the proba_dist over actions every 50 updates
         if accelerator.process_index == 1 and kwargs["lm_server_update_first_call"]:
-            if kwargs["number_updates"] % 50 == 0:
+            if kwargs["number_updates"] % 50 == 0 and candidates is not None:
                 prompts = self.generate_prompt(candidates[0])
                 subgoals = [candidates[0] for i in range(6)]
 
