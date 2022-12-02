@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed_%a 				# job name
-#SBATCH --time=00:15:00             										        # maximum execution time (HH:MM:SS)
+#SBATCH --time=20:00:00             										        # maximum execution time (HH:MM:SS)
 #SBATCH --output=slurm_logs/llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed_%a-%j.out            # output file name
 #SBATCH --error=slurm_logs/llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed_%a-%j.err             # err file name
 #SBATCH --account=imi@a100
-#SBATCH --qos=qos_gpu-dev
+#SBATCH --qos=qos_gpu-t3
 #SBATCH -C a100
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=64
