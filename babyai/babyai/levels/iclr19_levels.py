@@ -185,9 +185,11 @@ class Level_GoToLocalS8N7(Level_GoToLocal):
     def __init__(self, seed=None):
         super().__init__(room_size=8, num_dists=7, seed=seed)
 
+
 class Level_GoToLocalS8N16(Level_GoToLocal):
     def __init__(self, seed=None):
         super().__init__(room_size=8, num_dists=16, seed=seed)
+
 
 class Level_GoToLocal2(LevelGen):
     """
@@ -195,12 +197,12 @@ class Level_GoToLocal2(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=1,
-        num_cols=1,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=1,
+            num_cols=1,
+            num_dists=8,
+            seed=None
     ):
         super().__init__(
             room_size=room_size,
@@ -260,13 +262,13 @@ class Level_GoTo(RoomGridLevel):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=3,
-        num_cols=3,
-        num_dists=18,
-        doors_open=False,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=3,
+            num_cols=3,
+            num_dists=18,
+            doors_open=False,
+            seed=None
     ):
         self.num_dists = num_dists
         self.doors_open = doors_open
@@ -293,6 +295,45 @@ class Level_GoTo(RoomGridLevel):
 class Level_GoToOpen(Level_GoTo):
     def __init__(self, seed=None):
         super().__init__(doors_open=True, seed=seed)
+
+
+class Level_GoToFrench(RoomGridLevel):
+    """
+    Go to an object, the object may be in another room. Many distractors.
+    """
+
+    def __init__(
+            self,
+            room_size=8,
+            num_rows=1,
+            num_cols=1,
+            num_dists=8,
+            doors_open=True,
+            seed=None,
+            language='french'
+    ):
+        self.num_dists = num_dists
+        self.doors_open = doors_open
+        super().__init__(
+            num_rows=num_rows,
+            num_cols=num_cols,
+            room_size=room_size,
+            seed=seed,
+            language=language
+        )
+
+    def gen_mission(self):
+        self.place_agent()
+        self.connect_all()
+        objs = self.add_distractors(num_distractors=self.num_dists, all_unique=False)
+        self.check_objs_reachable()
+        obj = self._rand_elem(objs)
+        self.instrs = GoToInstr(ObjDesc(obj.type, obj.color))
+
+
+        # If requested, open all the doors
+        if self.doors_open:
+            self.open_all_doors()
 
 
 class Level_GoToObjMaze(Level_GoTo):
@@ -546,15 +587,16 @@ class Level_GoToMedium(LevelGen):
             force_colors=True
         )
 
+
 class Level_GoToMediumOpen(LevelGen):
     """
     Go to an object, the object may be in another room. Many distractors.
     """
 
     def __init__(
-        self,
-        doors_open=True,
-        seed=None
+            self,
+            doors_open=True,
+            seed=None
     ):
         self.doors_open = doors_open
         super().__init__(
@@ -602,6 +644,7 @@ class Level_GoToMediumOpen(LevelGen):
         if self.doors_open:
             self.open_all_doors()
 
+
 class Level_GoToLarge(LevelGen):
     """
     GoTo, 2x2
@@ -624,15 +667,16 @@ class Level_GoToLarge(LevelGen):
             force_colors=True
         )
 
+
 class Level_GoToLargeOpen(LevelGen):
     """
     Go to an object, the object may be in another room. Many distractors.
     """
 
     def __init__(
-        self,
-        doors_open=True,
-        seed=None
+            self,
+            doors_open=True,
+            seed=None
     ):
         self.doors_open = doors_open
         super().__init__(
@@ -679,6 +723,7 @@ class Level_GoToLargeOpen(LevelGen):
         # If requested, open all the doors
         if self.doors_open:
             self.open_all_doors()
+
 
 class Level_PutNextMedium(LevelGen):
     """
@@ -763,12 +808,12 @@ class Level_GoToSeq(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=3,
-        num_cols=3,
-        num_dists=18,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=3,
+            num_cols=3,
+            num_dists=18,
+            seed=None
     ):
         super().__init__(
             room_size=room_size,
@@ -798,12 +843,12 @@ class Level_Synth(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=3,
-        num_cols=3,
-        num_dists=18,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=3,
+            num_cols=3,
+            num_dists=18,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -840,12 +885,12 @@ class Level_PickupLocal(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=1,
-        num_cols=1,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=1,
+            num_cols=1,
+            num_dists=8,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -874,12 +919,12 @@ class Level_PickupMedium(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=1,
-        num_cols=2,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=1,
+            num_cols=2,
+            num_dists=8,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -908,12 +953,12 @@ class Level_PickupLarge(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=2,
-        num_cols=2,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=2,
+            num_cols=2,
+            num_dists=8,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -942,12 +987,12 @@ class Level_PickupOpenMedium(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=1,
-        num_cols=2,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=1,
+            num_cols=2,
+            num_dists=8,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -976,12 +1021,12 @@ class Level_PickupOpenLarge(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=2,
-        num_cols=2,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=2,
+            num_cols=2,
+            num_dists=8,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -1010,12 +1055,12 @@ class Level_PickupOpenPutNextMedium(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=1,
-        num_cols=2,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=1,
+            num_cols=2,
+            num_dists=8,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -1044,12 +1089,12 @@ class Level_PickupOpenPutNextLarge(LevelGen):
     """
 
     def __init__(
-        self,
-        room_size=8,
-        num_rows=2,
-        num_cols=2,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=2,
+            num_cols=2,
+            num_dists=8,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -1070,14 +1115,13 @@ class Level_PickupOpenPutNextLarge(LevelGen):
 
 class Level_UnlockMedium(LevelGen):
 
-
     def __init__(
-        self,
-        room_size=8,
-        num_rows=1,
-        num_cols=2,
-        num_dists=8,
-        seed=None
+            self,
+            room_size=8,
+            num_rows=1,
+            num_cols=2,
+            num_dists=8,
+            seed=None
     ):
         # We add many distractors to increase the probability
         # of ambiguous locations within the same room
@@ -1245,6 +1289,7 @@ class Level_SynthThenSynthLarge(LevelGen):
             force_colors=True,
             assert_first=True
         )
+
 
 class Level_OpenGoToLarge(LevelGen):
     def __init__(self, seed=None):

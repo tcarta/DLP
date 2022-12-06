@@ -169,29 +169,61 @@ def plot_grad_norm_average(*args, **kwargs):
     plt.yticks(fontsize=10)
     plt.show()
 
+
+# ####################### Performance function of the pretrainning ######################## #
+# ####################### LLM_small ######################## #
+
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5small_action-heads_trained-embedding_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*GTL-PPO-NoPre.*']
+labels = ['FLAN-T5-small 3 actions pretrained', 'FLAN-T5-small 3 actions non pretrained', 'Classic-A2C']
+limits = 1000000
+colors = ['tab:blue', 'tab:orange', 'tab:green']
+# plot_average(df, regexs, labels, limits, colors)
+
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5small_action-heads_trained-embedding_nbr_actions_3_shape_reward_beta_0_seed.*']
+labels = ['FLAN-T5-small 3 actions pretrained', 'FLAN-T5-small 3 actions non pretrained']
+limits = 200000
+colors = ['tab:blue', 'tab:orange', 'tab:green']
+# plot_entropy_average(df, regexs, labels, limits, colors)
+# plot_grad_norm_average(df, regexs, labels, limits, colors)
+
 # ####################### Performance function of the size of the LLM ######################## #
 
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xxl_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5xl_nbr_actions_3_shape_reward_beta_0_seed.*',
           '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
           '.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
           '.*GTL-PPO-NoPre.*']
-labels = ['FLAN-T5-xxl', 'FLAN-T5-large', 'FLAN-T5-small', 'Classic-A2C']
+labels = ['FLAN-T5-xxl', 'FLAN-T5-xl', 'FLAN-T5-large', 'FLAN-T5-small', 'Classic-A2C']
 limits = 400000
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey']
-plot_average(df, regexs, labels, limits, colors)
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey']
+# plot_average(df, regexs, labels, limits, colors)
 # plot_sucess_rate_average(df, regexs, labels, limits, colors)
 
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xxl_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5xl_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
           '.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*']
-labels = ['FLAN-T5-large', 'FLAN-T5-small']
-limits = 400000
-colors = ['tab:blue', 'tab:orange']
+labels = ['FLAN-T5-xxl', 'FLAN-T5-xl', 'FLAN-T5-large', 'FLAN-T5-small']
+limits = 200000
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 # plot_entropy_average(df, regexs, labels, limits, colors)
 # plot_loss_average(df, regexs, labels, limits, colors)
 # plot_policy_loss_average(df, regexs, labels, limits, colors)
 # plot_value_loss_average(df, regexs, labels, limits, colors)
 # plot_grad_norm_average(df, regexs, labels, limits, colors)
 
+# ####################### Performance function of the type of the LLM's training data ######################## #
+# ####################### LLM_large ######################## #
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_nbr_env_32_GPT2large_nbr_actions_3_shape_reward_beta_0_seed.*']
+labels = ['FLAN-T5-large', 'GPT2-large']
+limits = 200000
+colors = ['tab:blue', 'tab:orange']
+# plot_average(df, regexs, labels, limits, colors)
+# plot_entropy_average(df, regexs, labels, limits, colors)
 # ####################### Performance function of the number of actions ######################## #
 
 # ####################### LLM_small ######################## #
@@ -246,9 +278,9 @@ colors = ['tab:blue', 'tab:orange']
 regexs = ['.*llm_gtlarge_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
           '.*GTLarge-PPO-NoPre.*']
 labels = ['FLAN-T5-large 4 rooms', 'Classic A2C 4 rooms']
-limits = 200000
+limits = 400000
 colors = ['tab:blue', 'tab:orange']
-# plot_average(df, regexs, labels, limits, colors)
+plot_average(df, regexs, labels, limits, colors)
 
 # ####################### Mixt ######################## #
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',

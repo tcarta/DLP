@@ -72,7 +72,8 @@ class RoomGrid(MiniGridEnv):
         num_rows=3,
         num_cols=3,
         max_steps=100,
-        seed=0
+        seed=0,
+        language='english'
     ):
         assert room_size > 0
         assert room_size >= 3
@@ -93,7 +94,8 @@ class RoomGrid(MiniGridEnv):
             height=height,
             max_steps=max_steps,
             see_through_walls=False,
-            seed=seed
+            seed=seed,
+            language=language
         )
 
     def room_from_pos(self, x, y):

@@ -1,16 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name=llm_gtl_nbr_env_32_Flan_T5xxl_nbr_actions_3_shape_reward_beta_0_seed_%a                            # job name
-#SBATCH --time=00:25:00                                                                                              # maximum execution time (HH:MM:SS)
-#SBATCH --output=slurm_logs/llm_gtl_nbr_env_32_Flan_T5xxl_nbr_actions_3_shape_reward_beta_0_seed_%a-%j.out            # output file name
-#SBATCH --error=slurm_logs/llm_gtl_nbr_env_32_Flan_T5xxl_nbr_actions_3_shape_reward_beta_0_seed_%a-%j.err             # err file name
+#SBATCH --job-name=llm_gtl_nbr_env_32_Flan_T5xl_nbr_actions_3_shape_reward_beta_0_seed_%a                            # job name
+#SBATCH --time=20:00:00                                                                                              # maximum execution time (HH:MM:SS)
+#SBATCH --output=slurm_logs/llm_gtl_nbr_env_32_Flan_T5xl_nbr_actions_3_shape_reward_beta_0_seed_%a-%j.out            # output file name
+#SBATCH --error=slurm_logs/llm_gtl_nbr_env_32_Flan_T5xl_nbr_actions_3_shape_reward_beta_0_seed_%a-%j.err             # err file name
 #SBATCH --account=imi@a100
-#SBATCH --qos=qos_gpu-dev
+#SBATCH --qos=qos_gpu-t3
 #SBATCH -C a100 
 #SBATCH --gres=gpu:8
 #SBATCH --cpus-per-task=64
 #SBATCH --hint=nomultithread
 #SBATCH --ntasks-per-node=1
-#SBATCH --nodes=4
+#SBATCH --nodes=2
 
 #SBATCH --array=1-2
 
@@ -27,13 +27,13 @@ srun dlp/slurm/launcher.sh \
                     rl_script_args.size_action_space=3 \
                     rl_script_args.saving_path_logs=$WORK/code/DLP/storage/logs \
                     rl_script_args.name_experiment='llm_gtl' \
-                    rl_script_args.name_model='Flan_T5xxl' \
+                    rl_script_args.name_model='Flan_T5xl' \
                     rl_script_args.saving_path_model=$SCRATCH/DLP/models \
                     lamorel_args.llm_args.model_type=seq2seq \
-                    lamorel_args.llm_args.model_path=/gpfsscratch/rech/imi/ucy39hi/saycan-scienceworld/llms/flan-t5-xxl \
-                    lamorel_args.llm_args.model_parallelism_size=8 \
+                    lamorel_args.llm_args.model_path=/gpfsscratch/rech/imi/ucy39hi/saycan-scienceworld/llms/flan-t5-xl \
+                    lamorel_args.llm_args.model_parallelism_size=4 \
                     lamorel_args.llm_args.minibatch_size=3 \
-                    lamorel_args.accelerate_args.num_machines=4 \
+                    lamorel_args.accelerate_args.num_machines=2 \
                     lamorel_args.accelerate_args.num_processes=5 \
                     --config-path=$WORK/code/DLP/dlp/configs \
                     --config-name=multi-node_slurm_cluster_config

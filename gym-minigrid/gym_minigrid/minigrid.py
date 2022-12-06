@@ -672,7 +672,8 @@ class MiniGridEnv(gym.Env):
             max_steps=100,
             see_through_walls=False,
             seed=1337,
-            agent_view_size=7
+            agent_view_size=7,
+            language='english'
     ):
         # Can't set both grid_size and width/height
         if grid_size:
@@ -714,6 +715,9 @@ class MiniGridEnv(gym.Env):
         self.height = height
         self.max_steps = max_steps
         self.see_through_walls = see_through_walls
+
+        # Language of the descriptions
+        self.language = language
 
         # Current position and direction of the agent
         self.agent_pos = None
@@ -1319,22 +1323,39 @@ class MiniGridEnv(gym.Env):
 
         return img
 
-    def gen_graph(self, level=3, move_forward=None):
+    def gen_graph(self, move_forward=None):
         grid, vis_mask = self.gen_obs_grid()
 
         # Encode the partially observable view into a numpy array
         image = grid.encode(vis_mask)
         # (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], state)
         # State, 0: open, 1: closed, 2: locked
-        IDX_TO_STATE = {0: 'open', 1: 'closed', 2: 'locked'}
+        if self.language == 'english':
+            IDX_TO_STATE = {0: 'open', 1: 'closed', 2: 'locked'}
+            IDX_TO_COLOR = {0: 'rouge', 1: 'verte', 2: 'bleue', 3: 'violette', 4: 'jaune', 5: 'grise'}
+            IDX_TO_OBJECT = {0: 'non visible', 1: 'vide', 2: 'mur', 3: 'sol', 4: 'porte', 5: 'clef',
+                                 6: 'balle', 7: 'boîte', 8: 'but', 9: 'lave', 10: 'agent'}
+
+        elif self.language == 'french':
+            IDX_TO_STATE = {0: 'ouverte', 1: 'fermée', 2: 'fermée à clef'}
+            IDX_TO_COLOR = {0: 'rouge', 1: 'verte', 2: 'bleue', 3: 'violette', 4: 'jaune', 5: 'grise'}
+            IDX_TO_OBJECT = {0: 'non visible', 1: 'vide', 2: 'mur', 3: 'sol', 4: 'porte', 5: 'clef',
+                             6: 'balle', 7: 'boîte', 8: 'but', 9: 'lave', 10: 'agent'}
+
         list_textual_descriptions = []
 
         if self.carrying is not None:
             # print('carrying')
-            list_textual_descriptions.append("you carry a {} {}".format(self.carrying.color, self.carrying.type))
+            if self.language == 'english':
+                list_textual_descriptions.append("you carry a {} {}".format(self.carrying.color, self.carrying.type))
+            elif self.language == 'french':
+                list_textual_descriptions.append("vous portez une {} {}".format(self.carrying.type, self.carrying.color))
         if move_forward is not None:  # go forward
             if not move_forward:
-                list_textual_descriptions.append("you can't go forward")
+                if self.language == 'english':
+                    list_textual_descriptions.append("you can't go forward")
+                elif self.language =='french':
+                    list_textual_descriptions.append("vous ne pouvez pas avancer")
 
         # print('A agent position i: {}, j: {}'.format(self.agent_pos[0], self.agent_pos[1]))
         agent_pos_vx, agent_pos_vy = self.get_view_coords(self.agent_pos[0], self.agent_pos[1])
@@ -1356,186 +1377,122 @@ class MiniGridEnv(gym.Env):
         #  We describe a wall only if there is no objects between the agent and the wall in straight line
 
         # Find wall in front
-        j = agent_pos_vy-1
+        j = agent_pos_vy - 1
         object_seen = False
-        while j >= 0 and not(object_seen):
+        while j >= 0 and not (object_seen):
             if image[agent_pos_vx][j][0] != 0 and image[agent_pos_vx][j][0] != 1:
                 if image[agent_pos_vx][j][0] == 2:
-                    list_textual_descriptions.append("A wall {} step forward".format(agent_pos_vy - j))
+                    if self.language == 'english':
+                        list_textual_descriptions.append("A wall {} step forward".format(agent_pos_vy - j))
+                    elif self.language == 'french':
+                        list_textual_descriptions.append("Un mur à {} pas devant".format(agent_pos_vy - j))
                     object_seen = True
                 else:
                     object_seen = True
             j -= 1
         # Find wall left
-        i = agent_pos_vx-1
+        i = agent_pos_vx - 1
         object_seen = False
-        while i >= 0 and not(object_seen):
+        while i >= 0 and not (object_seen):
             if image[i][agent_pos_vy][0] != 0 and image[i][agent_pos_vy][0] != 1:
                 if image[i][agent_pos_vy][0] == 2:
-                    list_textual_descriptions.append("A wall {} step left".format(agent_pos_vx - i))
+                    if self.language == 'english':
+                        list_textual_descriptions.append("A wall {} step left".format(agent_pos_vx - i))
+                    elif self.language == 'french':
+                        list_textual_descriptions.append("Un mur à {} pas à gauche".format(agent_pos_vx - i))
                     object_seen = True
                 else:
                     object_seen = True
             i -= 1
         # Find wall right
-        i = agent_pos_vx+1
+        i = agent_pos_vx + 1
         object_seen = False
-        while i < image.shape[0] and not(object_seen):
+        while i < image.shape[0] and not (object_seen):
             if image[i][agent_pos_vy][0] != 0 and image[i][agent_pos_vy][0] != 1:
                 if image[i][agent_pos_vy][0] == 2:
-                    list_textual_descriptions.append("A wall {} step right".format(i - agent_pos_vx))
+                    if self.language == 'english':
+                        list_textual_descriptions.append("A wall {} step right".format(i - agent_pos_vx))
+                    elif self.language == 'french':
+                         list_textual_descriptions.append("Un mur à {} pas à droite".format(i - agent_pos_vx))
                     object_seen = True
                 else:
                     object_seen = True
             i += 1
 
-        # level 0 just return what you see
-        if level == 0:
-            for i in view_field_dictionary.keys():
-                for j in view_field_dictionary[i].keys():
+        # returns the position of seen objects relative to you
+        for i in view_field_dictionary.keys():
+            for j in view_field_dictionary[i].keys():
+                if i != agent_pos_vx or j != agent_pos_vy:
                     object = view_field_dictionary[i][j]
-                    if object[0] != 4 and object[0] != 2:  # if it is not a door and not a wall
-                        list_textual_descriptions.append(
-                            "You see a {} {}".format(IDX_TO_COLOR[object[1]], IDX_TO_OBJECT[object[0]]))
+                    relative_position = dict()
+
+                    if i - agent_pos_vx > 0:
+                        if self.language == 'english':
+                            relative_position["x_axis"] = ("right", i - agent_pos_vx)
+                        elif self.language == 'french':
+                             relative_position["x_axis"] = ("à droite", i - agent_pos_vx)
+                    elif i - agent_pos_vx == 0:
+                        if self.language == 'english':
+                            relative_position["x_axis"] = ("face", 0)
+                        elif self.language == 'french':
+                            relative_position["x_axis"] = ("en face", 0)
+                    else:
+                        if self.language == 'english':
+                            relative_position["x_axis"] = ("left", agent_pos_vx - i)
+                        elif self.language == 'french':
+                            relative_position["x_axis"] = ("à gauche", agent_pos_vx - i)
+                    if agent_pos_vy - j > 0:
+                        if self.language == 'english':
+                            relative_position["y_axis"] = ("forward", agent_pos_vy - j)
+                        elif self.language == 'french':
+                            relative_position["y_axis"] = ("devant", agent_pos_vy - j)
+                    elif agent_pos_vy - j == 0:
+                        if self.language == 'english':
+                            relative_position["y_axis"] = ("forward", 0)
+                        elif self.language == 'french':
+                            relative_position["y_axis"] = ("devant", 0)
+
+                    distances = []
+                    if relative_position["x_axis"][0] in ["face", "en face"]:
+                        distances.append((relative_position["y_axis"][1], relative_position["y_axis"][0]))
+                    elif relative_position["y_axis"][1] == 0:
+                        distances.append((relative_position["x_axis"][1], relative_position["x_axis"][0]))
+                    else:
+                        distances.append((relative_position["x_axis"][1], relative_position["x_axis"][0]))
+                        distances.append((relative_position["y_axis"][1], relative_position["y_axis"][0]))
+
+                    description = ""
+                    if object[0] != 4:  # if it is not a door
+                        if self.language == 'english':
+                            description = f"A {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
+                        elif self.language == 'french':
+                            description = f"Une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} "
+
                     else:
                         if IDX_TO_STATE[object[2]] != 0:  # if it is not open
-                            list_textual_descriptions.append(
-                                "You see a {} {} {}".format(IDX_TO_STATE[object[2]], IDX_TO_COLOR[object[1]],
-                                                            IDX_TO_OBJECT[object[0]]))
-                        else:
-                            list_textual_descriptions.append(
-                                "You see an {} {} {}".format(IDX_TO_STATE[object[2]], IDX_TO_COLOR[object[1]],
-                                                             IDX_TO_OBJECT[object[0]]))
-
-        # level 1 just return what object you are next to if any
-        if level == 1:
-            if agent_pos_vx - 1 in view_field_dictionary.keys() and agent_pos_vy in view_field_dictionary[
-                agent_pos_vx - 1].keys():
-                object = view_field_dictionary[agent_pos_vx - 1][agent_pos_vy]
-                if object[0] != 4 and object[0] != 2:  # if it is not a door and not a wall
-                    list_textual_descriptions.append(
-                        "A {} {} is next to you at your left".format(IDX_TO_COLOR[object[1]], IDX_TO_OBJECT[object[0]]))
-                else:
-                    if IDX_TO_STATE[object[2]] != 0:  # if it is not open
-                        list_textual_descriptions.append(
-                            "A {} {} {} is next to you at your left".format(IDX_TO_STATE[object[2]],
-                                                                            IDX_TO_COLOR[object[1]],
-                                                                            IDX_TO_OBJECT[object[0]]))
-                    else:
-                        list_textual_descriptions.append(
-                            "An {} {} {} is next to you at your left".format(IDX_TO_STATE[object[2]],
-                                                                             IDX_TO_COLOR[object[1]],
-                                                                             IDX_TO_OBJECT[object[0]]))
-
-            if agent_pos_vx + 1 in view_field_dictionary.keys() and agent_pos_vy in view_field_dictionary[
-                agent_pos_vx + 1].keys():
-                object = view_field_dictionary[agent_pos_vx + 1][agent_pos_vy]
-                if object[0] != 4 and object[0] != 2:  # if it is not a door and not a wall
-                    list_textual_descriptions.append(
-                        "A {} {} is next to you at your right".format(IDX_TO_COLOR[object[1]],
-                                                                      IDX_TO_OBJECT[object[0]]))
-                else:
-                    if IDX_TO_STATE[object[2]] != 0:  # if it is not open
-                        list_textual_descriptions.append(
-                            "A {} {} {} is next to you at your right".format(IDX_TO_STATE[object[2]],
-                                                                             IDX_TO_COLOR[object[1]],
-                                                                             IDX_TO_OBJECT[object[0]]))
-                    else:
-                        list_textual_descriptions.append(
-                            "An {} {} {} is next to you at your right".format(IDX_TO_STATE[object[2]],
-                                                                              IDX_TO_COLOR[object[1]],
-                                                                              IDX_TO_OBJECT[object[0]]))
-
-            if agent_pos_vx in view_field_dictionary.keys() and agent_pos_vy - 1 in view_field_dictionary[
-                agent_pos_vx].keys():
-                object = view_field_dictionary[agent_pos_vx][agent_pos_vy - 1]
-                if object[0] != 4 and object[0] != 2:  # if it is not a door and not a wall
-                    list_textual_descriptions.append(
-                        "A {} {} is next to you in front of you".format(IDX_TO_COLOR[object[1]],
-                                                                        IDX_TO_OBJECT[object[0]]))
-                else:
-                    if IDX_TO_STATE[object[2]] != 0:  # if it is not open
-                        list_textual_descriptions.append(
-                            "A {} {} {} is next to you in front of you".format(IDX_TO_STATE[object[2]],
-                                                                               IDX_TO_COLOR[object[1]],
-                                                                               IDX_TO_OBJECT[object[0]]))
-                    else:
-                        list_textual_descriptions.append(
-                            "An {} {} {} is just in front of you".format(IDX_TO_STATE[object[2]],
-                                                                         IDX_TO_COLOR[object[1]],
-                                                                         IDX_TO_OBJECT[object[0]]))
-
-        # level 2 just return what object you face if any
-        if level == 2:
-            if agent_pos_vx in view_field_dictionary.keys():
-                if agent_pos_vy - 1 not in view_field_dictionary[
-                    agent_pos_vx].keys():  # if you are not next to the object (level 1)
-                    count_j = agent_pos_vy - 2
-                    while count_j >= 0:
-                        print(count_j)
-                        print(view_field_dictionary[agent_pos_vx].keys())
-                        if count_j in view_field_dictionary[agent_pos_vx].keys():
-                            object = view_field_dictionary[agent_pos_vx][count_j]
-
-                            if object[0] != 4 and object[0] != 2:  # if it is not a door and not a wall
-                                list_textual_descriptions.append(
-                                    "You face a {} {}".format(IDX_TO_COLOR[object[1]], IDX_TO_OBJECT[object[0]]))
-                            else:
-                                if IDX_TO_STATE[object[2]] != 0:  # if it is not open
-                                    list_textual_descriptions.append(
-                                        "You face a {} {} {}".format(IDX_TO_STATE[object[2]], IDX_TO_COLOR[object[1]],
-                                                                     IDX_TO_OBJECT[object[0]]))
-                                else:
-                                    list_textual_descriptions.append(
-                                        "You face an {} {} {}".format(IDX_TO_STATE[object[2]], IDX_TO_COLOR[object[1]],
-                                                                      IDX_TO_OBJECT[object[0]]))
-                            break
-                        count_j -= 1
-
-        # level 3 returns the position of seen objects relative to you
-        if level == 3:
-            for i in view_field_dictionary.keys():
-                for j in view_field_dictionary[i].keys():
-                    if i != agent_pos_vx or j != agent_pos_vy:
-                        object = view_field_dictionary[i][j]
-                        relative_position = dict()
-
-                        if i - agent_pos_vx > 0:
-                            relative_position["x_axis"] = ("right", i - agent_pos_vx)
-                        elif i - agent_pos_vx == 0:
-                            relative_position["x_axis"] = ("face", 0)
-                        else:
-                            relative_position["x_axis"] = ("left", agent_pos_vx - i)
-
-                        if agent_pos_vy - j > 0:
-                            relative_position["y_axis"] = ("forward", agent_pos_vy - j)
-                        elif agent_pos_vy - j == 0:
-                            relative_position["y_axis"] = ("forward", 0)
-
-                        distances = []
-                        if relative_position["x_axis"][0] == "face":
-                            distances.append((relative_position["y_axis"][1], relative_position["y_axis"][0]))
-                        elif relative_position["y_axis"][1] == 0:
-                            distances.append((relative_position["x_axis"][1], relative_position["x_axis"][0]))
-                        else:
-                            distances.append((relative_position["x_axis"][1], relative_position["x_axis"][0]))
-                            distances.append((relative_position["y_axis"][1], relative_position["y_axis"][0]))
-
-                        if object[0] != 4:  # if it is not a door
-                            description = f"A {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
-
-                        else:
-                            if IDX_TO_STATE[object[2]] != 0:  # if it is not open
+                            if self.language == 'english':
                                 description = f"A {IDX_TO_STATE[object[2]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
+                            elif self.language == 'french':
+                                description = f"Une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_STATE[object[2]]} "
 
-                            else:
+                        else:
+                            if self.language == 'english':
                                 description = f"An {IDX_TO_STATE[object[2]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
+                            elif self.language == 'french':
+                                description = f"Une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_STATE[object[2]]} "
 
-                        for _i, _distance in enumerate(distances):
-                            if _i > 0:
+                    for _i, _distance in enumerate(distances):
+                        if _i > 0:
+                            if self.language == 'english':
                                 description += " and "
-                            description += f"{_distance[0]} step{'s' if _distance[0] > 1 else ''} {_distance[1]}"
+                            elif self.language == 'french':
+                                description += " et "
 
-                        list_textual_descriptions.append(description)
+                        if self.language == 'english':
+                            description += f"{_distance[0]} step{'s' if _distance[0] > 1 else ''} {_distance[1]}"
+                        elif self.language == 'french':
+                            description += f"{_distance[0]} pas {_distance[1]}"
+
+                    list_textual_descriptions.append(description)
 
         return {'descriptions': list_textual_descriptions}
