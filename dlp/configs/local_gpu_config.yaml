@@ -1,5 +1,6 @@
 lamorel_args:
   log_level: info
+  allow_subgraph_use_whith_gradient: true
   distributed_setup_args:
     n_rl_processes: 1
     n_llm_processes: 1
@@ -47,3 +48,5 @@ rl_script_args:
   number_episodes: 10
   zero_shot: False
   language: 'english'
+  load_embedding: false
+  use_action_heads: false

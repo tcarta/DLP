@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/gym-minigrid" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/language-models-for-rl-gpt-j_lora/lamorel/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/v0.13.2/accelerate-0.13.2/src" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.10 (dlp)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

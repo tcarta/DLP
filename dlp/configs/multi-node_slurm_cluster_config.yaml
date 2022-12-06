@@ -1,6 +1,6 @@
 lamorel_args:
   log_level: info
-  allow_subgraph_use_whith_gradient: false
+  allow_subgraph_use_whith_gradient: true
   distributed_setup_args:
     n_rl_processes: 1
     n_llm_processes: 4
@@ -46,3 +46,5 @@ rl_script_args:
   name_model: ???
   saving_path_model: ???
   name_environment: 'BabyAI-GoToLocal-v0'
+  load_embedding: false
+  use_action_heads: false

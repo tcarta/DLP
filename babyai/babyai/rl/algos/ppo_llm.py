@@ -15,7 +15,7 @@ class PPOAlgoLlm(BaseAlgo):
     """The class for the Proximal Policy Optimization algorithm
     ([Schulman et al., 2015](https://arxiv.org/abs/1707.06347))."""
 
-    def __init__(self, envs, lm_server, nbr_llms=None,
+    def __init__(self, envs, lm_server, llm_scoring_module_key, nbr_llms=None,
                  num_frames_per_proc=None, discount=0.99, lr=7e-4, beta1=0.9, beta2=0.999,
                  gae_lambda=0.95,
                  entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5,
@@ -24,9 +24,8 @@ class PPOAlgoLlm(BaseAlgo):
                  number_envs=None, subgoals=None, id_expe=None, aux_info=None, debug=False):
         num_frames_per_proc = num_frames_per_proc or 128
 
-        super().__init__(envs, lm_server, num_frames_per_proc, discount, lr, gae_lambda, entropy_coef,
-                         value_loss_coef, max_grad_norm, reshape_reward, subgoals,
-                         aux_info)
+        super().__init__(envs, lm_server, llm_scoring_module_key, num_frames_per_proc, discount, lr, gae_lambda,
+                         entropy_coef, value_loss_coef, max_grad_norm, reshape_reward, subgoals, aux_info)
 
         self.nbr_llms = nbr_llms
 
@@ -84,7 +83,7 @@ class PPOAlgoLlm(BaseAlgo):
 
                 # return the list of dict_return calculate by each llm
                 list_dict_return = self.lm_server.update(exps_batch.prompt,
-                                                         exps_batch.subgoal,
+                                                         self.filter_candidates_fn(exps_batch.subgoal),
                                                          exps=dict(exps_batch),
                                                          lr=self.lr,
                                                          beta1=self.beta1,
@@ -99,7 +98,8 @@ class PPOAlgoLlm(BaseAlgo):
                                                          lm_server_update_first_call=lm_server_update_first_call,
                                                          saving_path_model=self.saving_path_model,
                                                          experiment_path=self.experiment_path,
-                                                         number_updates=self.number_updates)
+                                                         number_updates=self.number_updates,
+                                                         scoring_module_key=self.llm_scoring_module_key)
 
                 lm_server_update_first_call = False
 

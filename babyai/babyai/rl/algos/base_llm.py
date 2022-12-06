@@ -19,16 +19,17 @@ import matplotlib.pyplot as plt
 class BaseAlgo(ABC):
     """The base class for RL algorithms."""
 
-    def __init__(self, envs, lm_server, num_frames_per_proc, discount, lr, gae_lambda, entropy_coef,
-                 value_loss_coef, max_grad_norm, reshape_reward, subgoals, aux_info):
+    def __init__(self, envs, lm_server, llm_scoring_module_key, num_frames_per_proc, discount, lr, gae_lambda,
+                 entropy_coef, value_loss_coef, max_grad_norm, reshape_reward, subgoals, aux_info):
         """
         Initializes a `BaseAlgo` instance.
         Parameters:
         ----------
         envs : list
             a list of environments that will be run in parallel
-        llm : torch.Module
-            the language model
+        lm_server : Lamorel Caller
+        llm_scoring_module_key : str
+            the key of the module function to ask scroing from
         num_frames_per_proc : int
             the number of frames collected by every process for an update
         discount : float
@@ -55,6 +56,14 @@ class BaseAlgo(ABC):
 
         self.env = envs
         self.lm_server = lm_server
+        self.llm_scoring_module_key = llm_scoring_module_key
+        # Useful filter to avoid computing score of each candidate when using additional heads directly
+        if llm_scoring_module_key == "__scoring":
+            self.filter_candidates_fn = lambda candidates: candidates
+        elif llm_scoring_module_key == "policy_head":
+            self.filter_candidates_fn = lambda candidates: None
+        else:
+            raise NotImplementedError()
         # self.acmodel.train()
         self.num_frames_per_proc = num_frames_per_proc
         self.discount = discount
@@ -164,9 +173,12 @@ class BaseAlgo(ABC):
                                            deque_obs=self.obs_queue[j], deque_actions=self.acts_queue[j])
                       for j in range(self.num_procs)]
 
-            output = self.lm_server.score(contexts=prompt, candidates=self.subgoals,
-                                          additional_module_function_keys=['value'])
-            scores = torch.stack([_o["__score"] for _o in output])
+            output = self.lm_server.custom_module_fns(module_function_keys=[self.llm_scoring_module_key, 'value'],
+                                                      contexts=prompt,
+                                                      candidates=self.filter_candidates_fn(self.subgoals))
+            # output = self.lm_server.score(contexts=prompt, candidates=self.subgoals,
+            #                               additional_module_function_keys=['value'])
+            scores = torch.stack([_o[self.llm_scoring_module_key] for _o in output])
             scores_max = torch.max(scores, dim=1)[0]
             """print("scores: {}".format(scores.shape))
             print("scores_max: {}".format(scores_max.shape))"""
