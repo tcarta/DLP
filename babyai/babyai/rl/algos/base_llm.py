@@ -58,7 +58,7 @@ class BaseAlgo(ABC):
         self.lm_server = lm_server
         self.llm_scoring_module_key = llm_scoring_module_key
         # Useful filter to avoid computing score of each candidate when using additional heads directly
-        if llm_scoring_module_key == "__scoring":
+        if llm_scoring_module_key == "__score":
             self.filter_candidates_fn = lambda candidates: candidates
         elif llm_scoring_module_key == "policy_head":
             self.filter_candidates_fn = lambda candidates: None
