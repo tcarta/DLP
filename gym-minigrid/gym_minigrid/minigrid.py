@@ -1332,9 +1332,8 @@ class MiniGridEnv(gym.Env):
         # State, 0: open, 1: closed, 2: locked
         if self.language == 'english':
             IDX_TO_STATE = {0: 'open', 1: 'closed', 2: 'locked'}
-            IDX_TO_COLOR = {0: 'rouge', 1: 'verte', 2: 'bleue', 3: 'violette', 4: 'jaune', 5: 'grise'}
-            IDX_TO_OBJECT = {0: 'non visible', 1: 'vide', 2: 'mur', 3: 'sol', 4: 'porte', 5: 'clef',
-                                 6: 'balle', 7: 'boîte', 8: 'but', 9: 'lave', 10: 'agent'}
+            IDX_TO_COLOR = dict(zip(COLOR_TO_IDX.values(), COLOR_TO_IDX.keys()))
+            IDX_TO_OBJECT = dict(zip(OBJECT_TO_IDX.values(), OBJECT_TO_IDX.keys()))
 
         elif self.language == 'french':
             IDX_TO_STATE = {0: 'ouverte', 1: 'fermée', 2: 'fermée à clef'}
@@ -1347,15 +1346,9 @@ class MiniGridEnv(gym.Env):
         if self.carrying is not None:
             # print('carrying')
             if self.language == 'english':
-                list_textual_descriptions.append("you carry a {} {}".format(self.carrying.color, self.carrying.type))
+                list_textual_descriptions.append("You carry a {} {}".format(self.carrying.color, self.carrying.type))
             elif self.language == 'french':
-                list_textual_descriptions.append("vous portez une {} {}".format(self.carrying.type, self.carrying.color))
-        if move_forward is not None:  # go forward
-            if not move_forward:
-                if self.language == 'english':
-                    list_textual_descriptions.append("you can't go forward")
-                elif self.language =='french':
-                    list_textual_descriptions.append("vous ne pouvez pas avancer")
+                list_textual_descriptions.append("Tu portes une {} {}".format(self.carrying.type, self.carrying.color))
 
         # print('A agent position i: {}, j: {}'.format(self.agent_pos[0], self.agent_pos[1]))
         agent_pos_vx, agent_pos_vy = self.get_view_coords(self.agent_pos[0], self.agent_pos[1])
@@ -1365,7 +1358,6 @@ class MiniGridEnv(gym.Env):
 
         for i in range(image.shape[0]):
             for j in range(image.shape[1]):
-
                 if image[i][j][0] != 0 and image[i][j][0] != 1 and image[i][j][0] != 2:
                     if i not in view_field_dictionary.keys():
                         view_field_dictionary[i] = dict()
@@ -1379,13 +1371,14 @@ class MiniGridEnv(gym.Env):
         # Find wall in front
         j = agent_pos_vy - 1
         object_seen = False
-        while j >= 0 and not (object_seen):
+        while j >= 0 and not object_seen:
             if image[agent_pos_vx][j][0] != 0 and image[agent_pos_vx][j][0] != 1:
                 if image[agent_pos_vx][j][0] == 2:
                     if self.language == 'english':
-                        list_textual_descriptions.append("A wall {} step forward".format(agent_pos_vy - j))
+                        list_textual_descriptions.append(
+                            f"You see a wall {agent_pos_vy - j} step{'s' if agent_pos_vy - j > 1 else ''} forward")
                     elif self.language == 'french':
-                        list_textual_descriptions.append("Un mur à {} pas devant".format(agent_pos_vy - j))
+                        list_textual_descriptions.append("Tu vois u mur à {} pas devant".format(agent_pos_vy - j))
                     object_seen = True
                 else:
                     object_seen = True
@@ -1393,13 +1386,14 @@ class MiniGridEnv(gym.Env):
         # Find wall left
         i = agent_pos_vx - 1
         object_seen = False
-        while i >= 0 and not (object_seen):
+        while i >= 0 and not object_seen:
             if image[i][agent_pos_vy][0] != 0 and image[i][agent_pos_vy][0] != 1:
                 if image[i][agent_pos_vy][0] == 2:
                     if self.language == 'english':
-                        list_textual_descriptions.append("A wall {} step left".format(agent_pos_vx - i))
+                        list_textual_descriptions.append(
+                            f"You see a wall {agent_pos_vx - i} step{'s' if agent_pos_vx - i > 1 else ''} left")
                     elif self.language == 'french':
-                        list_textual_descriptions.append("Un mur à {} pas à gauche".format(agent_pos_vx - i))
+                        list_textual_descriptions.append("Tu vois un mur à {} pas à gauche".format(agent_pos_vx - i))
                     object_seen = True
                 else:
                     object_seen = True
@@ -1407,13 +1401,14 @@ class MiniGridEnv(gym.Env):
         # Find wall right
         i = agent_pos_vx + 1
         object_seen = False
-        while i < image.shape[0] and not (object_seen):
+        while i < image.shape[0] and not object_seen:
             if image[i][agent_pos_vy][0] != 0 and image[i][agent_pos_vy][0] != 1:
                 if image[i][agent_pos_vy][0] == 2:
                     if self.language == 'english':
-                        list_textual_descriptions.append("A wall {} step right".format(i - agent_pos_vx))
+                        list_textual_descriptions.append(
+                            f"You see a wall {i - agent_pos_vx} step{'s' if i - agent_pos_vx > 1 else ''} right")
                     elif self.language == 'french':
-                         list_textual_descriptions.append("Un mur à {} pas à droite".format(i - agent_pos_vx))
+                         list_textual_descriptions.append("Tu vois un mur à {} pas à droite".format(i - agent_pos_vx))
                     object_seen = True
                 else:
                     object_seen = True
@@ -1464,22 +1459,22 @@ class MiniGridEnv(gym.Env):
                     description = ""
                     if object[0] != 4:  # if it is not a door
                         if self.language == 'english':
-                            description = f"A {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
+                            description = f"You see a {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
                         elif self.language == 'french':
-                            description = f"Une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} "
+                            description = f"Tu vois une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} "
 
                     else:
                         if IDX_TO_STATE[object[2]] != 0:  # if it is not open
                             if self.language == 'english':
-                                description = f"A {IDX_TO_STATE[object[2]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
+                                description = f"You see a {IDX_TO_STATE[object[2]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
                             elif self.language == 'french':
-                                description = f"Une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_STATE[object[2]]} "
+                                description = f"Tu vois une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_STATE[object[2]]} "
 
                         else:
                             if self.language == 'english':
-                                description = f"An {IDX_TO_STATE[object[2]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
+                                description = f"You see an {IDX_TO_STATE[object[2]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_OBJECT[object[0]]} "
                             elif self.language == 'french':
-                                description = f"Une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_STATE[object[2]]} "
+                                description = f"Tu vois une {IDX_TO_OBJECT[object[0]]} {IDX_TO_COLOR[object[1]]} {IDX_TO_STATE[object[2]]} "
 
                     for _i, _distance in enumerate(distances):
                         if _i > 0:
