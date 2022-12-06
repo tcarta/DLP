@@ -28,7 +28,7 @@ srun dlp/slurm/launcher.sh \
                     rl_script_args.saving_path_logs=$WORK/code/DLP/storage/logs \
                     rl_script_args.name_experiment='llm_gtm' \
                     rl_script_args.name_model='Flan_T5large' \
-                    rl_script_args.name_environment='BabyAI-GoToMedium-v0' \
+                    rl_script_args.name_environment='BabyAI-GoToMediumOpen-v0' \
                     rl_script_args.saving_path_model=$SCRATCH/DLP/models \
                     lamorel_args.llm_args.model_type=seq2seq \
                     lamorel_args.llm_args.model_path=/gpfsscratch/rech/imi/ucy39hi/saycan-scienceworld/llms/flan-t5-large \

@@ -1,26 +1,28 @@
 lamorel_args:
   log_level: info
+  allow_subgraph_use_whith_gradient: false
   distributed_setup_args:
     n_rl_processes: 1
-    n_llm_processes: 1
+    n_llm_processes: 4
   accelerate_args:
     config_file: accelerate/default_config.yaml
     machine_rank: 0
-    num_machines: 2
-    num_processes: 2
+    num_machines: ???
+    num_processes: ???
+    main_process_ip: ???
   llm_args:
-    model_type: seq2seq
-    model_path: t5-small
+    model_type: ???
+    model_path: ???
     pretrained: true
-    model_parallelism_size: 1
-    minibatch_size: 4
+    model_parallelism_size: ???
+    minibatch_size: ???
     synchronize_gpus_after_scoring: false
     empty_cuda_cache_after_scoring: false
   updater_args:
 rl_script_args:
   path: ???
-  seed: 0
-  number_envs: 2
+  seed: ???
+  number_envs: ???
   num_steps: 100
   max_episode_steps: 3
   simplification_str: easy
@@ -37,13 +39,13 @@ rl_script_args:
   adam_eps: 1e-5
   clip_eps: 0.2
   epochs: 4
-  batch_size: 16
-  size_action_space: 3
-  saving_path_logs: '/home/tcarta/DLP/storage/logs'
-  name_experiment: 'llm_gtl'
-  name_model: 'T5small'
-  saving_path_model: '/home/tcarta/DLP/storage/models'
-  name_environment: 'BabyAI-GoTo-v0'
-  number_episodes: 10
-  zero_shot: False
+  batch_size: 64
+  size_action_space: ???
+  saving_path_logs: ???
+  name_experiment: ???
+  name_model: ???
+  saving_path_model: ???
+  name_environment: 'BabyAI-GoToLocal-v0'
+  number_episodes: ???
+  zero_shot: ???
   language: 'english'
