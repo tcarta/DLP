@@ -63,7 +63,6 @@ class ValueModuleFn(BaseModuleFunction):
             torch.nn.Linear(1024, 1024),
             torch.nn.Sigmoid(),
             torch.nn.Linear(1024, 1),
-            torch.nn.Sigmoid(),
         ).to(self.device)
 
     def forward(self, forward_outputs, minibatch, tokenized_context, **kwargs):
