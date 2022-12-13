@@ -124,7 +124,7 @@ class Updater(BaseUpdater):
         if "load_embedding" in kwargs and kwargs["load_embedding"] and not hasattr(self, "is_embedding_loaded"):
             pretrained_weights = torch.load(kwargs["llm_path"] + "/pytorch_model.bin")
             state_dict = OrderedDict({
-                k: v for k, v in pretrained_weights.items() if "embed" in k or "shared" in k # Warning: this may fail if the model shares other things than emebdding weights
+                k: v for k, v in pretrained_weights.items() if "embed" in k or "shared" in k # Warning: this may fail if the model shares other things than embedding weights
             })
             self._llm_module.module._LLM_model.load_state_dict(state_dict, strict=False)
             self.is_embedding_loaded = True
@@ -151,7 +151,7 @@ class Updater(BaseUpdater):
             # rescaled scores to avoid the flattening effect of softmax on small numbers
             # softmax([1e-9, 1e-100, 1e-9])~[0.33, 0.33, 0.33]
             # softmax([1e-9, 1e-100, 1e-9]/1e-9)~[0.4223, 0.1554, 0.4223]
-            if scores_max[j] < 1e-45:
+            if kwargs["scoring_module_key"] == "__score" and scores_max[j] < 1e-45:
                 proba_dist.append(F.softmax(torch.ones_like(scores[j]), dim=-1).unsqueeze(dim=0))
             else:
                 proba_dist.append(F.softmax(scores[j] / scores_max[j], dim=-1).unsqueeze(dim=0))
@@ -176,7 +176,6 @@ class Updater(BaseUpdater):
         loss = policy_loss - kwargs["entropy_coef"] * entropy + kwargs["value_loss_coef"] * value_loss
 
         # Update actor-critic
-
         self.optimizer.zero_grad()
         """print(policy_loss.detach().item())
         print(value_loss.detach().item())
