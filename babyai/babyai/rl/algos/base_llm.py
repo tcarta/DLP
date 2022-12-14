@@ -186,13 +186,16 @@ class BaseAlgo(ABC):
 
             proba_dist = []
             for j in range(len(scores)):
-                # rescaled scores to avoid the flattening effect of softmax
-                # softmax([1e-9, 1e-100, 1e-9])~[0.33, 0.33, 0.33]
-                # softmax([1e-9, 1e-100, 1e-9]*1e9)~[0.4223, 0.1554, 0.4223]
-                if self.llm_scoring_module_key == "__score" and scores_max[j] < 1e-45:
-                    proba_dist.append(F.softmax(torch.ones_like(scores[j]), dim=-1).unsqueeze(dim=0))
+                if self.llm_scoring_module_key == "__score":
+                    # rescaled scores to avoid the flattening effect of softmax
+                    # softmax([1e-9, 1e-100, 1e-9])~[0.33, 0.33, 0.33]
+                    # softmax([1e-9, 1e-100, 1e-9]*1e9)~[0.4223, 0.1554, 0.4223]
+                    if scores_max[j] < 1e-45:
+                        proba_dist.append(F.softmax(torch.ones_like(scores[j]), dim=-1).unsqueeze(dim=0))
+                    else:
+                        proba_dist.append(F.softmax(scores[j]/scores_max[j], dim=-1).unsqueeze(dim=0))
                 else:
-                    proba_dist.append(F.softmax(scores[j]/scores_max[j], dim=-1).unsqueeze(dim=0))
+                    proba_dist.append(F.softmax(scores[j], dim=-1).unsqueeze(dim=0))
 
             proba_dist = torch.cat(proba_dist, dim=0)
             dist = Categorical(probs=proba_dist)
