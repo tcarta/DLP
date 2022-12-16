@@ -125,7 +125,8 @@ class BaseAlgo(ABC):
         self.log_reshaped_return_bonus = [0] * self.num_procs
         self.log_num_frames = [0] * self.num_procs
 
-    def generate_prompt(self, goal, subgoals, deque_obs, deque_actions):
+    @classmethod
+    def generate_prompt(cls, goal, subgoals, deque_obs, deque_actions):
 
         ldo = len(deque_obs)
         lda = len(deque_actions)
