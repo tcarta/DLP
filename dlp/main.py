@@ -41,6 +41,7 @@ def reward_function(subgoal_proba=None, reward=None, policy_value=None, llm_0=No
     if reward > 0:
         return [20 * reward, 0]
     else:
+        # return [1, 0]
         return [0, 0]
 
 
@@ -69,9 +70,10 @@ class ValueModuleFn(BaseModuleFunction):
 
     def forward(self, forward_outputs, minibatch, tokenized_context, **kwargs):
         if self._model_type == "causal":
-            model_head = forward_outputs['hidden_states'][0][0, len(tokenized_context["input_ids"]) - 1, :]
+            model_head = forward_outputs['hidden_states'][-1][:, len(tokenized_context["input_ids"]) - 1, :]
         else:
-            model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+            # model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+            model_head = forward_outputs["decoder_hidden_states"][-1][:, 0, :]
 
         value = self.value_head_op(model_head.to(self.device))
         return value.cpu()
@@ -95,9 +97,10 @@ class ActionHeadsModuleFn(BaseModuleFunction):
     def forward(self, forward_outputs, minibatch, tokenized_context, **kwargs):
         # Get encoder's representation
         if self._model_type == "causal":
-            model_head = forward_outputs['hidden_states'][0][0, len(tokenized_context["input_ids"])-1, :]
+            model_head = forward_outputs['hidden_states'][-1][0, len(tokenized_context["input_ids"]) - 1, :]
         else:
-            model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+            # model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+            model_head = forward_outputs["decoder_hidden_states"][-1][:, 0, :]
 
         actions_score = self.action_heads_op(model_head)
         return actions_score.cpu()
@@ -144,7 +147,7 @@ class Updater(BaseUpdater):
         # Compute loss
         output = self._llm_module([kwargs["scoring_module_key"], 'value'],
                                   contexts=contexts, candidates=candidates, require_grad=True)
-        scores = torch.stack([_o[kwargs["scoring_module_key"]] for _o in output])
+        scores = torch.stack([_o[kwargs["scoring_module_key"]] for _o in output]).squeeze()
         scores_max = torch.max(scores, dim=1)[0]
         values = torch.stack([_o["value"][0] for _o in output])
 
