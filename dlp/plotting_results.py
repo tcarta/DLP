@@ -35,6 +35,7 @@ def plot_average_impl(df, regexps, labels, limits, colors, y_value='return_mean'
 
     for regex, models, label, color in zip(regexps, model_groups, labels, colors):
         # print("regex: {}".format(regex))
+        print(models)
         df_re = df[df['model'].isin(models)]
         # the average doesn't make sense if most models are not included,
         # so we only for the period of training that has been done by all models
@@ -102,6 +103,7 @@ def plot_sucess_rate_average(*args, **kwargs):
     plt.title("Average Success Rate", fontsize=15)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
+    plt.grid()
     plt.show()
 
 
@@ -170,45 +172,73 @@ def plot_grad_norm_average(*args, **kwargs):
     plt.show()
 
 
-# ####################### Performance function of the pretrainning ######################## #
-# ####################### LLM_small ######################## #
-
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5small_action-heads_trained-embedding_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*GTL-PPO-NoPre.*']
-labels = ['FLAN-T5-small 3 actions pretrained', 'FLAN-T5-small 3 actions non pretrained', 'Classic-A2C']
-limits = 1000000
-colors = ['tab:blue', 'tab:orange', 'tab:green']
-# plot_average(df, regexs, labels, limits, colors)
-
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5small_action-heads_trained-embedding_nbr_actions_3_shape_reward_beta_0_seed.*']
-labels = ['FLAN-T5-small 3 actions pretrained', 'FLAN-T5-small 3 actions non pretrained']
-limits = 200000
-colors = ['tab:blue', 'tab:orange', 'tab:green']
-# plot_entropy_average(df, regexs, labels, limits, colors)
-# plot_grad_norm_average(df, regexs, labels, limits, colors)
-
-# ####################### Performance function of the size of the LLM ######################## #
-
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xxl_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5xl_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*GTL-PPO-NoPre.*']
-labels = ['FLAN-T5-xxl', 'FLAN-T5-xl', 'FLAN-T5-large', 'FLAN-T5-small', 'Classic-A2C']
-limits = 400000
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey']
+# #######################MTRL############################################################## #
+regexs = ['.*llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*MTRL-nbr_actions-6-PPO-NoPre.*']
+labels = ['FLAN-T5-large', 'Classic-A2C']
+# limits = 3500000
+limits = 1500000
+colors = ['tab:blue', 'tab:orange']
 # plot_average(df, regexs, labels, limits, colors)
 # plot_sucess_rate_average(df, regexs, labels, limits, colors)
 
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xxl_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5xl_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*']
-labels = ['FLAN-T5-xxl', 'FLAN-T5-xl', 'FLAN-T5-large', 'FLAN-T5-small']
-limits = 200000
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
+regexs = ['.*llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
+labels = ['FLAN-T5-large']
+# limits = 3500000
+limits = 1000000
+colors = ['tab:blue']
+# plot_entropy_average(df, regexs, labels, limits, colors)
+# plot_loss_average(df, regexs, labels, limits, colors)
+# plot_policy_loss_average(df, regexs, labels, limits, colors)
+# plot_value_loss_average(df, regexs, labels, limits, colors)
+
+# ####################### Performance function of the input type ######################## #
+# ####################### GoToRedBall env ######################## #
+
+regexs = ['.*llm_gtl_nbr_env_32_T5small_nbr_actions_3_shape_reward_beta_0.*',
+          '.*GTRB-nbr_actions-6-PPO-NoPre.*']
+labels = ['DRRN_3 actions', 'PPO_GTRB']
+limits = 400000
+colors = ['tab:blue', 'tab:orange']
+# plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+# ####################### Performance function of the pretrainning ######################## #
+# ####################### GoToRedBall env ######################## #
+# ####################### LLM_small ######################## #
+
+regexs = ['.*llm_gtrb_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5small_trained_action-heads_nbr_actions_3_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5small_action-heads_nbr_actions_3_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5small_trained-embedding_nbr_actions_3_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5small_trained-embedding_action-heads_nbr_actions_3_shape_reward_beta_0.*']
+
+labels = ['Full pretrained & scoring', 'Full pretrained & action head', 'Not pretrained & action head',
+          'Pretrained embedding & scoring', 'Pretrained embedding & action head']
+limits = 500000
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey']
+# plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_entropy_average(df, regexs, labels, limits, colors)
+# plot_value_loss_average(df, regexs, labels, limits, colors)
+# ####################### Performance function of the size of the LLM ######################## #
+
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xl_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*GTL-nbr_actions-6-PPO-NoPre.*']
+labels = ['FLAN-T5-xl', 'FLAN-T5-large', 'FLAN-T5-small', 'Classic-A2C']
+limits = 400000
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey']
+# plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xl_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
+labels = ['FLAN-T5-xl', 'FLAN-T5-large', 'FLAN-T5-small']
+limits = 400000
+colors = ['tab:blue', 'tab:orange', 'tab:green']
 # plot_entropy_average(df, regexs, labels, limits, colors)
 # plot_loss_average(df, regexs, labels, limits, colors)
 # plot_policy_loss_average(df, regexs, labels, limits, colors)
@@ -217,44 +247,203 @@ colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 
 # ####################### Performance function of the type of the LLM's training data ######################## #
 # ####################### LLM_large ######################## #
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_GPT2large_nbr_actions_3_shape_reward_beta_0_seed.*']
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_GPT2large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
 labels = ['FLAN-T5-large', 'GPT2-large']
-limits = 200000
+limits = 400000
 colors = ['tab:blue', 'tab:orange']
 # plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
 # plot_entropy_average(df, regexs, labels, limits, colors)
 # ####################### Performance function of the number of actions ######################## #
 
-# ####################### LLM_small ######################## #
+# ####################### 3 actions ######################## #
 
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_9_shape_reward_beta_0_seed.*']
-labels = ['FLAN-T5-small 3 actions', 'FLAN-T5-small 9 actions']
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
+          '.*GTL-nbr_actions-3-PPO-NoPre.*']
+labels = ['FLAN-T5-small 3 actions', 'FLAN-T5-large 3 actions', 'Classic-A2C']
 limits = 400000
-colors = ['tab:blue', 'tab:orange']
+colors = ['tab:blue', 'tab:orange', 'tab:green']
 # plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# ####################### 9 actions ######################## #
 
-# ####################### LLM_large ######################## #
-
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_9_shape_reward_beta_0_seed.*']
-labels = ['FLAN-T5-large 3 actions', 'FLAN-T5-large 9 actions']
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0.*',
+          '.*GTL-nbr_actions-9-PPO-NoPre.*']
+labels = ['FLAN-T5-small 9 actions', 'FLAN-T5-large 9 actions', 'Classic-A2C']
 limits = 400000
-colors = ['tab:blue', 'tab:orange']
+colors = ['tab:blue', 'tab:orange', 'tab:green']
 # plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# ####################### 12 actions ######################## #
 
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_12_turn_left_turn_right_go_forward_pick_up_drop_toggle_eat_dance_sleep_do_nothing_cut_think_shape_reward_beta_0*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_12_turn_left_turn_right_go_forward_pick_up_drop_toggle_eat_dance_sleep_do_nothing_cut_think_shape_reward_beta_0.*'
+          '.*GTL-nbr_actions-12-PPO-NoPre.*']
+labels = ['FLAN-T5-small 12 actions', 'FLAN-T5-large 12 actions', 'Classic-A2C']
+limits = 400000
+colors = ['tab:blue', 'tab:orange', 'tab:green']
+# plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
 # ####################### LLM_mixt ######################## #
 
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_9_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_9_shape_reward_beta_0_seed.*']
-labels = ['FLAN-T5-small 3 actions', 'FLAN-T5-small 9 actions',
-          'FLAN-T5-large 3 actions', 'FLAN-T5-large 9 actions']
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0.*',
+          '.*GTL-nbr_actions-3-PPO-NoPre.*',
+          '.*GTL-nbr_actions-6-PPO-NoPre.*',
+          '.*GTL-nbr_actions-9-PPO-NoPre.*']
+labels = ['FLAN-T5-large 3 actions', 'FLAN-T5-large 6 actions', 'FLAN-T5-large 9 actions',
+          'Classic 3 actions', 'Classic 6 actions', 'Classic 9 actions']
 limits = 400000
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey']
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey', 'tab:purple', 'tab:pink']
 # plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+
+# ####################### Performance function of the number of distractors ######################## #
+# ####################### LLM_large ######################## #
+# ####################### 4 distractors ######################## #
+regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*GTL4-nbr_actions-6-PPO-NoPre.*']
+labels = ['FLAN-T5-large 4 distractors', 'Classic A2C 4 distractors']
+limits = 400000
+colors = ['tab:blue', 'tab:orange']
+# plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# ####################### 8 distractors ######################## #
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*GTL-nbr_actions-6-PPO-NoPre.*']
+labels = ['FLAN-T5-large 8 distractors', 'Classic A2C 8 distractors']
+limits = 400000
+colors = ['tab:blue', 'tab:orange']
+# plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# ####################### 16 distractors ######################## #
+regexs = ['.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*GTL16-nbr_actions-6-PPO-NoPre.*']
+labels = ['FLAN-T5-large 16 distractors', 'Classic A2C 16 distractors']
+limits = 400000
+colors = ['tab:blue', 'tab:orange']
+# plot_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# ####################### Mixt ######################## #
+regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*GTL4-nbr_actions-6-PPO-NoPre.*',
+          '.*GTL-nbr_actions-6-PPO-NoPre.*',
+          '.*GTL16-nbr_actions-6-PPO-NoPre.*']
+labels = ['FLAN-T5-large 4 distractors', 'FLAN-T5-large 8 distractors', 'FLAN-T5-large 16 distractors',
+          'Classic A2C 4 distractors', 'Classic A2C 8 distractors', 'Classic A2C 16 distractors']
+limits = 400000
+colors = ['tab:blue', 'tab:orange', 'tab:grey', 'tab:green', 'tab:purple', 'tab:pink']
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+# ####################### Full ######################## #
+regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
+          '.*GTL4-PPO-NoPre.*',
+          '.*GTL-PPO-NoPre.*',
+          '.*GTL16-PPO-NoPre.*']
+labels = ['FLAN-T5-large 4 distractors', 'FLAN-T5-large 8 distractors', 'FLAN-T5-large 16 distractors',
+          'Classic A2C 4 distractors', 'Classic A2C 8 distractors', 'Classic A2C 16 distractors']
+limits = 200000
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey', 'tab:cyan', 'tab:purple']
+# plot_average(df, regexs, labels, limits, colors)
+
+# ####################### Distribution shift study 6 actions ######################## #
+# ############################## MixtTrainLocal ##################################### #
+
+
+"""name_file = ['llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0_seed_1',
+'llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0_seed_2']
+
+
+columns_names=['{}'.format(i) for i in range(6*2)] # 6 actions 2 test prompts
+# TODO change to 4 test prompts next training and in for loop below
+actions = ["turn left", "turn right", "go forward", "pick up", "drop", "toggle"]
+
+distrib_large_1 = pd.read_csv("/home/tcarta/DLP/storage/logs/"+name_file[0]+"/distrib.csv", names=columns_names)
+distrib_large_2 = pd.read_csv("/home/tcarta/DLP/storage/logs/"+name_file[1]+"/distrib.csv", names=columns_names)
+
+
+len_data_frame = min(distrib_large_1.shape[0], distrib_large_2.shape[0])
+
+for j in range(2):
+    for i in range(len(actions)):
+        distrib_large_action_i = 0.5*(distrib_large_1.iloc[:len_data_frame, i+6*j].values +distrib_large_2.iloc[:len_data_frame, i+6*j].values )
+        plt.plot(np.arange(len_data_frame), distrib_large_action_i, label=actions[i])
+        plt.legend()
+        plt.xlabel("updates")
+        plt.ylabel("probability")
+        plt.title('Prompt {}'.format(j))
+    plt.show()
+"""
+
+# ####################### Distribution shift study 6 actions ######################## #
+# ############################## GoToLocal ##################################### #
+
+
+name_file = ['llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0_seed_1',
+'llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0_seed_2']
+
+
+
+actions = ["turn left", "turn right", "go forward", "pick up", "drop", "toggle"]
+columns_names = ['{}'.format(i) for i in range(len(actions)*2)] # 6 actions 2 test prompts
+
+distrib_large_1 = pd.read_csv("/home/tcarta/DLP/storage/logs/"+name_file[0]+"/distrib.csv", names=columns_names)
+distrib_large_2 = pd.read_csv("/home/tcarta/DLP/storage/logs/"+name_file[1]+"/distrib.csv", names=columns_names)
+
+
+len_data_frame = min(distrib_large_1.shape[0], distrib_large_2.shape[0])
+
+for j in range(2):
+    for i in range(len(actions)):
+        distrib_large_action_i = 0.5*(distrib_large_1.iloc[:len_data_frame, i+len(actions)*j].values +distrib_large_2.iloc[:len_data_frame, i+len(actions)*j].values )
+        plt.plot(np.arange(len_data_frame), distrib_large_action_i, label=actions[i])
+        plt.legend()
+        plt.xlabel("updates")
+        plt.ylabel("probability")
+        plt.title('Prompt {}'.format(j))
+    plt.show()
+
+
+# ####################### Distribution shift study 9 actions ######################## #
+# ############################## GoToLocal ##################################### #
+
+
+name_file = ['llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0_seed_1',
+'llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0_seed_2']
+
+
+
+actions = ["turn left", "turn right", "go forward", "pick up", "drop", "toggle", "sleep", "do_nothing", "think"]
+columns_names = ['{}'.format(i) for i in range(len(actions)*2)] # 9 actions 2 test prompts
+
+distrib_large_1 = pd.read_csv("/home/tcarta/DLP/storage/logs/"+name_file[0]+"/distrib.csv", names=columns_names)
+distrib_large_2 = pd.read_csv("/home/tcarta/DLP/storage/logs/"+name_file[1]+"/distrib.csv", names=columns_names)
+
+
+len_data_frame = min(distrib_large_1.shape[0], distrib_large_2.shape[0])
+
+for j in range(2):
+    for i in range(len(actions)):
+        distrib_large_action_i = 0.5*(distrib_large_1.iloc[:len_data_frame, i+len(actions)*j].values +distrib_large_2.iloc[:len_data_frame, i+len(actions)*j].values )
+        plt.plot(np.arange(len_data_frame), distrib_large_action_i, label=actions[i])
+        plt.legend()
+        plt.xlabel("updates")
+        plt.ylabel("probability")
+        plt.title('Prompt {}'.format(j))
+    plt.show()
+
+# ======================================================================================================================
+# ======================================================REMOVED=========================================================
+# ======================================================================================================================
 
 # ####################### Performance function of the number of rooms ######################## #
 # ####################### LLM_large ######################## #
@@ -280,7 +469,7 @@ regexs = ['.*llm_gtlarge_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta
 labels = ['FLAN-T5-large 4 rooms', 'Classic A2C 4 rooms']
 limits = 400000
 colors = ['tab:blue', 'tab:orange']
-plot_average(df, regexs, labels, limits, colors)
+# plot_average(df, regexs, labels, limits, colors)
 
 # ####################### Mixt ######################## #
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
@@ -289,54 +478,6 @@ regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_s
 labels = ['FLAN-T5-large 1 room', 'FLAN-T5-large 2 rooms', 'FLAN-T5-large 4 rooms']
 limits = 200000
 colors = ['tab:blue', 'tab:orange', 'tab:grey']
-# plot_average(df, regexs, labels, limits, colors)
-
-# ####################### Performance function of the number of distractors ######################## #
-# ####################### LLM_large ######################## #
-# ####################### 4 distractors ######################## #
-regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*GTL4-PPO-NoPre.*']
-labels = ['FLAN-T5-large 4 distractors', 'Classic A2C 4 distractors']
-limits = 200000
-colors = ['tab:blue', 'tab:orange']
-# plot_average(df, regexs, labels, limits, colors)
-
-# ####################### 8 distractors ######################## #
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*GTL-PPO-NoPre.*']
-labels = ['FLAN-T5-large 8 distractors', 'Classic A2C 8 distractors']
-limits = 200000
-colors = ['tab:blue', 'tab:orange']
-# plot_average(df, regexs, labels, limits, colors)
-
-# ####################### 16 distractors ######################## #
-regexs = ['.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*GTL16-PPO-NoPre.*']
-labels = ['FLAN-T5-large 16 distractors', 'Classic A2C 16 distractors']
-limits = 200000
-colors = ['tab:blue', 'tab:orange']
-# plot_average(df, regexs, labels, limits, colors)
-
-# ####################### Mixt ######################## #
-regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*']
-labels = ['FLAN-T5-large 4 distractors', 'FLAN-T5-large 8 distractors', 'FLAN-T5-large 16 distractors']
-limits = 200000
-colors = ['tab:blue', 'tab:orange', 'tab:grey']
-# plot_average(df, regexs, labels, limits, colors)
-
-# ####################### Full ######################## #
-regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_nbr_actions_3_shape_reward_beta_0_seed.*',
-          '.*GTL4-PPO-NoPre.*',
-          '.*GTL-PPO-NoPre.*',
-          '.*GTL16-PPO-NoPre.*']
-labels = ['FLAN-T5-large 4 distractors', 'FLAN-T5-large 8 distractors', 'FLAN-T5-large 16 distractors',
-          'Classic A2C 4 distractors', 'Classic A2C 8 distractors', 'Classic A2C 16 distractors']
-limits = 200000
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey', 'tab:cyan', 'tab:purple']
 # plot_average(df, regexs, labels, limits, colors)
 
 # ####################### Performance function of the type of reward ######################## #
@@ -369,6 +510,7 @@ limits = 250000
 colors = ['tab:blue', 'tab:orange', 'tab:green']
 # plot_average(df, regexs, labels, limits, colors)
 # plot_loss_average(df, regexs, labels, limits, colors)
+
 
 
 
@@ -415,7 +557,7 @@ for i in range(len(name_file)):
     for j in range(4):
         distrib_large = pd.read_csv("/home/tcarta/DLP/storage/logs/"+name_file[i]+"/distrib.csv", names=columns_names)
         # p = plt.bar(indices-0.15+0.1*j, distrib_large.iloc[j][:3], width=width, alpha=0.5, label="update: {}".format(j*50))
-        p = plt.bar(indices-0.15+0.1*j, distrib_large.iloc[j][12:15], width=width, alpha=0.5, label="update: {}".format(j*50))
+        p = plt.bar(indices-0.15+0.1*j, distrib_large.iloc[j][3:], width=width, alpha=0.5, label="update: {}".format(j*50))
         plt.xticks(indices, actions)
         plt.legend()
     plt.title(legend[i])
@@ -441,7 +583,7 @@ for i in range(len(name_file)):
     for j in range(2):
         distrib_large = pd.read_csv("/home/tcarta/DLP/storage/logs/"+name_file[i]+"/distrib.csv", names=columns_names)
         # p = plt.bar(indices-0.05+0.1*j, distrib_large.iloc[j][:9], width=width, alpha=0.5, label="update: {}".format(j*50))
-        p = plt.bar(indices-0.15+0.1*j, distrib_large.iloc[j][36:45], width=width, alpha=0.5, label="update: {}".format(j*50))
+        p = plt.bar(indices-0.15+0.1*j, distrib_large.iloc[j][9:], width=width, alpha=0.5, label="update: {}".format(j*50))
         plt.xticks(indices, actions, rotation=25)
         plt.legend()
     plt.title(legend[i])

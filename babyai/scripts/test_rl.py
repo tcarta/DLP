@@ -12,6 +12,8 @@ import gym
 import time
 import datetime
 import torch
+import test_PPO
+import numpy as np
 
 import babyai
 import babyai.utils as utils
@@ -66,7 +68,7 @@ if __name__ == "__main__":
                         help="origin of the demonstrations: human | agent (REQUIRED or demos or multi-demos required)")
     parser.add_argument("--episodes", type=int, default=0,
                         help="number of episodes of demonstrations to use"
-                            "(default: 0, meaning all demos)")
+                             "(default: 0, meaning all demos)")
     parser.add_argument("--multi-demos", nargs='*', default=None,
                         help="demos filenames for envs to train on (REQUIRED when multi-env is specified)")
     parser.add_argument("--multi-episodes", type=int, nargs='*', default=None,
@@ -87,7 +89,7 @@ if __name__ == "__main__":
                         help="demos filename")
     parser.add_argument("--hl-episodes", type=int, default=0,
                         help="number of high-level episodes of demonstrations to use"
-                            "(default: 0, meaning all demos)")
+                             "(default: 0, meaning all demos)")
     parser.add_argument("--subtask-model", default=None,
                         help="model to use for subtask prediction")
     parser.add_argument("--subtask-arch", default=None,
@@ -119,6 +121,9 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true", default=False,
                         help="whether to run RL in debug mode")
 
+    parser.add_argument("--number-trajs", type=int, default=None,
+                        help="nbr trajs for the test")
+
     args = parser.parse_args()
 
     utils.seed(args.seed)
@@ -129,7 +134,7 @@ if __name__ == "__main__":
     for i in range(args.procs):
         env = gym.make(args.env)
 
-        env.seed(100 * args.seed + i)
+        env.seed(int(1e9 * args.seed + i))  # to be sure to not have the same seeds as in the train (100h max ~ 100000 episodes done in our settings)
         if args.full_obs:
             if args.ego:
                 env = FullyObsImgEgoWrapper(env)
@@ -161,33 +166,6 @@ if __name__ == "__main__":
 
     utils.configure_logging(args.model)
     logger = logging.getLogger(__name__)
-
-    # Define logger and Tensorboard writer and CSV writer
-    header = (["update", "episodes", "frames", "FPS", "duration"]
-            + ["return_" + stat for stat in ['mean', 'std', 'min', 'max']]
-            + ["success_rate"]
-            + ["reshaped_return_" + stat for stat in ['mean', 'std', 'min', 'max']]
-            + ["reshaped_return_bonus_" + stat for stat in ['mean', 'std', 'min', 'max']]
-            + ["num_frames_" + stat for stat in ['mean', 'std', 'min', 'max']]
-            + ["entropy", "value", "policy_loss", "value_loss", "loss", "grad_norm"])
-
-    writer = None
-    if args.tb:
-        from tensorboardX import SummaryWriter
-        writer = SummaryWriter(utils.get_log_dir(args.model))
-    if args.wb:
-        import wandb
-        wandb.init(project="ella", name=args.model)
-        wandb.config.update(args)
-        writer = wandb
-
-    csv_path = os.path.join(utils.get_log_dir(args.model), 'log.csv')
-    first_created = not os.path.exists(csv_path)
-    # we don't buffer data going in the csv log, cause we assume
-    # that one update will take much longer that one write to the log
-    csv_writer = csv.writer(open(csv_path, 'a', 1))
-    if first_created:
-        csv_writer.writerow(header)
 
     # Define obss preprocessor
     if 'emb' in args.arch:
@@ -228,7 +206,8 @@ if __name__ == "__main__":
                 train_demos = train_demos[:args.episodes]
         logger.info('loading instruction handler')
         if args.hrl != "vanilla":
-            instr_handler = InstructionHandler(train_demos, load_bert="projection" in args.hrl, save_path=os.path.join(os.path.splitext(demos_path)[0], "ih"))
+            instr_handler = InstructionHandler(train_demos, load_bert="projection" in args.hrl,
+                                               save_path=os.path.join(os.path.splitext(demos_path)[0], "ih"))
         logger.info('loading instruction handler')
 
     if getattr(args, 'high_level_demos', None):
@@ -249,7 +228,8 @@ if __name__ == "__main__":
     # Initialize datasets / models used for shaping
     if args.reward_shaping in ["subtask_classifier_static"]:
         subtask_model = utils.load_model(args.subtask_model)
-        subtask_model_preproc = utils.InstructionOnlyPreprocessor(args.subtask_model, load_vocab_from=args.subtask_model)
+        subtask_model_preproc = utils.InstructionOnlyPreprocessor(args.subtask_model,
+                                                                  load_vocab_from=args.subtask_model)
         subtask_dataset = None
     elif args.reward_shaping in ["subtask_classifier_online", "subtask_classifier_online_unclipped"]:
         args.subtask_model = args.model + "_subtask"
@@ -267,7 +247,8 @@ if __name__ == "__main__":
         learn_baseline_cls = utils.load_model(args.learn_baseline)
         if torch.cuda.is_available():
             learn_baseline_cls.cuda()
-        learn_baseline_preproc = utils.InstructionOnlyPreprocessor(args.learn_baseline, load_vocab_from=args.learn_baseline)
+        learn_baseline_preproc = utils.InstructionOnlyPreprocessor(args.learn_baseline,
+                                                                   load_vocab_from=args.learn_baseline)
 
     # Adjust action space if necessary
     if args.hrl is not None:
@@ -289,10 +270,10 @@ if __name__ == "__main__":
 
         # Create vectorized environment
         envs = ParallelShapedEnv(envs, pi_l=pi_l_agent, done_action=done_action,
-                    instr_handler=instr_handler, reward_shaping=args.reward_shaping,
-                    subtask_cls=subtask_model, subtask_cls_preproc=subtask_model_preproc,
-                    subtask_online_ds=subtask_dataset, subtask_discount=args.subtask_discount,
-                    learn_baseline_cls=learn_baseline_cls, learn_baseline_preproc=learn_baseline_preproc)
+                                 instr_handler=instr_handler, reward_shaping=args.reward_shaping,
+                                 subtask_cls=subtask_model, subtask_cls_preproc=subtask_model_preproc,
+                                 subtask_online_ds=subtask_dataset, subtask_discount=args.subtask_discount,
+                                 learn_baseline_cls=learn_baseline_cls, learn_baseline_preproc=learn_baseline_preproc)
     else:
         action_space = envs[0].action_space
 
@@ -304,26 +285,28 @@ if __name__ == "__main__":
             acmodel = utils.load_model(args.pretrained_model, raise_not_found=True)
         else:
             acmodel = ACModel(obss_preprocessor.obs_space, action_space,
-                            args.image_dim, args.memory_dim, args.instr_dim,
-                            not args.no_instr, args.instr_arch, not args.no_mem, args.arch)
+                              args.image_dim, args.memory_dim, args.instr_dim,
+                              not args.no_instr, args.instr_arch, not args.no_mem, args.arch)
     logger.info("loaded ACModel")
-    obss_preprocessor.vocab.save()
-    utils.save_model(acmodel, args.model, writer)
 
     if torch.cuda.is_available():
         acmodel.cuda()
+
 
     # Set reward shaping function
     def bonus_penalty(_0, _1, reward, _2, info):
         if info[0] > 0:
             return [args.reward_scale * reward + args.pi_l_scale * max(info[0], 1), args.pi_l_scale * max(info[0], 1)]
         elif info[1] > 0:
-            return [args.reward_scale * reward - args.pi_l_scale_2 * max(info[1], 1), -args.pi_l_scale_2 * max(info[1], 1)]
+            return [args.reward_scale * reward - args.pi_l_scale_2 * max(info[1], 1),
+                    -args.pi_l_scale_2 * max(info[1], 1)]
         else:
             return [args.reward_scale * reward, 0]
 
+
     if args.reward_shaping == "multiply":
         reshape_reward = lambda _0, _1, reward, _2, _3: [args.reward_scale * reward, 0]
+
 
     def subtask_shaping(_0, _1, reward, _2, info):
         if reward > 0:
@@ -333,9 +316,11 @@ if __name__ == "__main__":
             return [args.pi_l_scale * info[0],
                     args.pi_l_scale * info[0]]
 
+
     def learn_baseline_shaping(_0, _1, reward, _2, info):
         return [args.reward_scale * reward + args.pi_l_scale * (args.subtask_discount * info[1] - info[0]),
                 args.subtask_discount * info[1] - info[0]]
+
 
     if args.reward_shaping in ["subtask_oracle_ordered",
                                "subtask_classifier_static",
@@ -349,130 +334,44 @@ if __name__ == "__main__":
 
     # Define actor-critic algorithm
     if args.algo == "ppo":
-        algo = babyai.rl.PPOAlgo(envs, acmodel, args.frames_per_proc, args.discount, args.lr, args.beta1, args.beta2,
-                                args.gae_lambda,
-                                args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
-                                args.optim_eps, args.clip_eps, args.ppo_epochs, args.batch_size, obss_preprocessor,
-                                reshape_reward, use_penv=False, sampling_temperature=args.sampling_temperature,
-                                debug=args.debug)
+        algo = test_PPO.BaseAlgo(envs, acmodel, args.number_trajs, reshape_reward,
+                                 obss_preprocessor, aux_info=None, sampling_temperature=args.sampling_temperature)
     else:
         raise ValueError("Incorrect algorithm name: {}".format(args.algo))
 
-    # When using extra binary information, more tensors (model params) are initialized compared to when we don't use that.
-    # Thus, there starts to be a difference in the random state. If we want to avoid it, in order to make sure that
-    # the results of supervised-loss-coef=0. and extra-binary-info=0 match, we need to reseed here.
-
     utils.seed(args.seed)
 
-    # Restore training status
-    status_path = os.path.join(utils.get_log_dir(args.model), 'status.json')
-    if os.path.exists(status_path):
-        with open(status_path, 'r') as src:
-            status = json.load(src)
-    else:
-        status = {'i': 0,
-                'num_episodes': 0,
-                'num_frames': 0}
+    experiment_path = utils.get_log_dir(args.model)
+    test_path = os.path.join(experiment_path, 'test')
+    if not os.path.exists(test_path):
+        os.makedirs(test_path)
+        os.makedirs(os.path.join(test_path, 'return_per_episode'))
 
+    dict_modifier_english = [{}]
+    dict_modifier_name = ['no_modification_test']
 
-    logger.info('COMMAND LINE ARGS:')
-    logger.info(args)
-    logger.info("CUDA available: {}".format(torch.cuda.is_available()))
+    format_str = ("Name dict: {} | Episodes Done: {} | Reward: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) |\
+     Success Rate: {: .2f} | \nReshaped: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) | Bonus: {: .2f} +- {: .2f}\
+                                 (Min: {: .2f} Max: {: .2f})")
 
-    # Train model
+    dm = dict_modifier_english
+    for d, d_name in zip(dm, dict_modifier_name):
+        logs = algo.generate_trajectories(d)
 
-    total_start_time = time.time()
-    best_success_rate = 0
-    best_mean_return = 0
-    test_env_name = args.env
+        return_per_episode = utils.synthesize(logs["return_per_episode"])
+        success_per_episode = utils.synthesize(
+            [1 if r > 0 else 0 for r in logs["return_per_episode"]])
+        reshaped_return_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
+        reshaped_return_bonus_per_episode = utils.synthesize(logs["reshaped_return_bonus_per_episode"])
+        # num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
 
-    logger.info("starting training")
-    while status['num_frames'] < args.frames:
+        data = [d_name, logs['episodes_done'], *return_per_episode.values(),
+                success_per_episode['mean'],
+                *reshaped_return_per_episode.values(),
+                *reshaped_return_bonus_per_episode.values()]
 
-        # Update parameters
-        update_start_time = time.time()
-        logs = algo.update_parameters()
-        update_end_time = time.time()
+        logger.info(Fore.YELLOW + format_str.format(*data) + Fore.RESET)
 
-        status['num_frames'] += logs["num_frames"]
-        status['num_episodes'] += logs['episodes_done']
-        status['i'] += 1
-
-        # Print logs
-        if status['i'] % args.log_interval == 0:
-            total_ellapsed_time = int(time.time() - total_start_time)
-            fps = logs["num_frames"] / (update_end_time - update_start_time)
-            duration = datetime.timedelta(seconds=total_ellapsed_time)
-            return_per_episode = utils.synthesize(logs["return_per_episode"])
-            success_per_episode = utils.synthesize(
-                [1 if r > 0 else 0 for r in logs["return_per_episode"]])
-            reshaped_return_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
-            reshaped_return_bonus_per_episode = utils.synthesize(logs["reshaped_return_bonus_per_episode"])
-            num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
-
-            data = [status['i'], status['num_episodes'], status['num_frames'],
-                    fps, total_ellapsed_time,
-                    *return_per_episode.values(),
-                    success_per_episode['mean'],
-                    *reshaped_return_per_episode.values(),
-                    *reshaped_return_bonus_per_episode.values(),
-                    *num_frames_per_episode.values(),
-                    logs["entropy"], logs["value"], logs["policy_loss"], logs["value_loss"],
-                    logs["loss"], logs["grad_norm"]]
-
-
-            format_str = ("\nUpdate: {} | Episodes Done: {} | Frames Seen: {:06} | FPS: {:04.0f} | Ellapsed: {}\
-                           \nReward: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) | Success Rate: {: .2f}\
-                           \nReshaped: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) | Bonus: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f})\
-                           \nFrames/Eps: {:.1f} +- {:.1f}  (Min: {}, Max {})\
-                           \nEntropy: {: .3f} | Value: {: .3f} | Policy Loss: {: .3f} | Value Loss: {: .3f} | Loss: {: .3f} | Grad Norm: {: .3f}")
-
-            logger.info(Fore.YELLOW + format_str.format(*data) + Fore.RESET)
-            if args.tb:
-                assert len(header) == len(data)
-                for key, value in zip(header, data):
-                    writer.add_scalar(key, float(value), status['num_frames'])
-            if args.wb:
-                writer.log({key: float(value) for key, value in zip(header, data)},\
-                    step=status['num_frames'])
-
-            csv_writer.writerow(data)
-
-        if args.reward_shaping in ["subtask_classifier_online", "subtask_classifier_online_unclipped"] and \
-            status['i'] % args.subtask_update_rate == 0:
-            s_header = ['subtask_' + item for item in \
-                ["update", "frames", "fps", "duration", "train_loss", "train_accuracy", "train_precision", "train_recall"]
-              + ["validation_loss", "validation_accuracy"]
-              + ["ground_truth_validation_accuracy", "ground_truth_validation_precision", "ground_truth_validation_recall"]]
-            subtask_log = subtask_prediction.online_update(subtask_dataset.get_demos(), s_header, writer)
-            if args.wb:
-                writer.log(subtask_log, step=status['num_frames'])
-                s_stats = subtask_dataset.get_stats()
-                s_header = ["subtask_dataset_" + item for item in ["len", "mean", "std", "min", "max"]]
-                if s_stats:
-                    writer.log({key: val for key, val in zip(s_header, s_stats)})
-                text = [[str(subtask_dataset.denoised_demos)]]
-                wandb.log({"subtask_dataset": wandb.Table(data=text, columns=["Contents"])})
-
-        # Save obss preprocessor vocabulary and model
-        if args.save_interval > 0 and status['i'] % args.save_interval == 0:
-            obss_preprocessor.vocab.save()
-            with open(status_path, 'w') as dst:
-                json.dump(status, dst)
-                utils.save_model(acmodel, args.model, writer)
-
-            save_model = False
-            mean_return = return_per_episode["mean"]
-            success_rate = success_per_episode["mean"]
-            if success_rate > best_success_rate:
-                best_success_rate = success_rate
-                save_model = True
-            elif (success_rate == best_success_rate) and (mean_return > best_mean_return):
-                best_mean_return = mean_return
-                save_model = True
-            if save_model:
-                utils.save_model(acmodel, args.model + '_best', writer)
-                obss_preprocessor.vocab.save(utils.get_vocab_path(args.model + '_best'))
-                logger.info("Return {: .2f}; best model is saved".format(mean_return))
-            else:
-                logger.info("Return {: .2f}; not the best model; not saved".format(mean_return))
+        path_test_folder = os.path.join(experiment_path, 'test/return_per_episode')
+        np_path = os.path.join(path_test_folder, d_name)
+        np.save(np_path, np.array(logs["return_per_episode"]))

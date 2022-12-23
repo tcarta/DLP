@@ -56,7 +56,6 @@ class ValueModuleFn(BaseModuleFunction):
             torch.nn.Linear(1024, 1024),
             torch.nn.Sigmoid(),
             torch.nn.Linear(1024, 1),
-            torch.nn.Sigmoid(),
         ).to(self.device)
 
     def forward(self, forward_outputs, minibatch, tokenized_context, **kwargs):
@@ -158,24 +157,76 @@ dict_dict_modifier = {'english': dict_modifier_english, 'french': dict_modifier_
 dict_modifier_name = ['no_modifications', 'other_name_same_categories', 'adj_synonym', 'no_meaning_nouns',
                       'no_meaning_adj', 'no_meaning_words', 'important_words_suppress']"""
 
-dict_modifier_english = [{"go to": "reach"},
+"""dict_modifier_english = [{"go to": "reach"},
                          {"go to": "face"},
                          {"Goal of the agent": "I would like the agent to"},
                          {"Goal of the agent": "You have to"}]
 dict_modifier_name = ['predicate_synonym_reach', 'predicate_synonym_face', "change_intro_first_personne_speaker",
-                      "change_intro_first_personne_agent"]
+                      "change_intro_first_personne_agent"]"""
+
+dict_modifier_english = [{},
+                         {
+                             'key': 'chair',
+                             'ball': 'table',
+                             'box': 'car'
+                         },
+                         {
+                             'red': 'vermilion',
+                             'green': 'jade',
+                             'blue': 'cyan',
+                             'purple': 'violet',
+                             'yellow': 'golden',
+                             'grey': 'silver'
+                         },
+                         {
+                             'key': 'dax',
+                             'ball': 'xolo',
+                             'box': 'afze'
+                         },
+                         {
+                             'red': 'faze',
+                             'green': 'jatu',
+                             'blue': 'croh',
+                             'purple': 'vurst',
+                             'yellow': 'gakul',
+                             'grey': 'sil'
+                         },
+                         {
+                             'key': 'dax',
+                             'ball': 'xolo',
+                             'box': 'afze',
+                             'red': 'faze',
+                             'green': 'jatu',
+                             'blue': 'croh',
+                             'purple': 'vurst',
+                             'yellow': 'gakul',
+                             'grey': 'sil'
+                         },
+                         {'Goal of the agent': 'I would like the agent to'},
+                         {'Goal of the agent': 'You have to'}]
+dict_modifier_name = ['no_modification_test', 'other_name_same_categories', 'adj_synonym', 'no_meaning_nouns',
+                      'no_meaning_adj', 'no_meaning_words', 'change_intro_first_personne_speaker',
+                      'change_intro_first_personne_agent']
+
 dict_dict_modifier = {'english': dict_modifier_english}
 
 
 class updater(BaseUpdater):
     def perform_update(self, contexts, candidates, _current_batch_ids, **kwargs):
         if not hasattr(self, "is_loaded"):
-            self._llm_module.load_state_dict(torch.load(kwargs["saving_path_model"] +
-                                                        "/" + kwargs["id_expe"] + "/model.checkpoint"))
-            self.is_loaded = True
+            try:
+                self._llm_module.load_state_dict(torch.load(kwargs["saving_path_model"] +
+                                                            "/" + kwargs["id_expe"] + "/last/model.checkpoint"))
+                self.is_loaded = True
+                print("Last")
+            except:
+                self._llm_module.load_state_dict(torch.load(kwargs["saving_path_model"] +
+                                                            "/" + kwargs["id_expe"] + "/backup/model.checkpoint"))
+                self.is_loaded = True
+                print("Backup")
 
 
-def run_agent(args, algo):
+def run_agent(args, algo, saving_path_logs, id_expe):
     format_str = ("Language: {} | Name dict: {} | Episodes Done: {} | Reward: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) |\
      Success Rate: {: .2f} | \nReshaped: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) | Bonus: {: .2f} +- {: .2f}\
                                  (Min: {: .2f} Max: {: .2f})")
@@ -191,6 +242,11 @@ def run_agent(args, algo):
         reshaped_return_bonus_per_episode = utils.synthesize(logs["reshaped_return_bonus_per_episode"])
         # num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
 
+        if args.modified_action_space:
+            for a in args.new_action_space:
+                d_name += a + '_'
+            d_name = d_name[:-1]
+
         data = [args.language, d_name, logs['episodes_done'], *return_per_episode.values(),
                 success_per_episode['mean'],
                 *reshaped_return_per_episode.values(),
@@ -198,10 +254,24 @@ def run_agent(args, algo):
 
         logger.info(Fore.YELLOW + format_str.format(*data) + Fore.RESET)
 
+        test_path = os.path.join(os.path.join(saving_path_logs, id_expe), 'test')
+        experiment_path = os.path.join(test_path, args.name_environment)
+        path_test_folder = os.path.join(experiment_path, 'return_per_episode')
+        np_path = os.path.join(path_test_folder, d_name)
+        np.save(np_path, np.array(logs["return_per_episode"]))
+
 
 # This will be overriden by lamorel's launcher if used
 @hydra.main(config_path='config', config_name='config')
 def main(config_args):
+
+    """name_env = config_args.rl_script_args.name_environment
+    for i in range(1000):
+        env = gym.make(name_env)
+        env.seed(int(i))
+        obs, info = env.reset()
+        print(obs['mission'])"""
+
     # lm server
     lm_server = Caller(config_args.lamorel_args, custom_updater_class=updater,
                        custom_module_functions={'value': ValueModuleFn(config_args.lamorel_args.llm_args.model_type)})
@@ -209,12 +279,26 @@ def main(config_args):
     id_expe = config_args.rl_script_args.name_experiment + \
               '_nbr_env_{}_'.format(config_args.rl_script_args.number_envs) + \
               '{}_'.format(config_args.rl_script_args.name_model) + \
-              'nbr_actions_{}_'.format(config_args.rl_script_args.size_action_space) + \
-              'shape_reward_beta_{}_'.format(config_args.rl_script_args.reward_shaping_beta) + \
-              'seed_{}'.format(config_args.rl_script_args.seed)
+              'pretrained_{}_'.format(config_args.lamorel_args.llm_args.pretrained)
+
+    if not config_args.lamorel_args.llm_args.pretrained:
+        id_expe += 'load_embedding_{}_'.format(config_args.rl_script_args.load_embedding) + \
+                  'use_action_heads_{}_'.format(config_args.rl_script_args.use_action_heads)
+
+    id_expe += 'nbr_actions_{}_'.format(len(config_args.rl_script_args.action_space))
+
+    # if config_args.rl_script_args.modified_action_space is not False we keep the same id_expe
+    # we just create a file with test_name containing the modified action in
+    # name_experiment/test/return_per_episode/test_name.npy
+    for a in config_args.rl_script_args.action_space:
+        id_expe += a + '_'
+
+    id_expe += 'shape_reward_beta_{}_'.format(config_args.rl_script_args.reward_shaping_beta) + \
+               'seed_{}'.format(config_args.rl_script_args.seed)
 
     if not config_args.rl_script_args.zero_shot:
-        lm_server.update([None, None, None, None], [[None], [None], [None], [None]],
+        lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                         [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
                          id_expe=id_expe, saving_path_model=config_args.rl_script_args.saving_path_model)
 
     # Env
@@ -225,20 +309,13 @@ def main(config_args):
     number_envs = config_args.rl_script_args.number_envs
     for i in range(number_envs):
         env = gym.make(name_env)
-        env.seed(int(1e9 * seed + i))
+        env.seed(
+            int(1e9 * seed + i))  # to be sure to not have the same seeds as in the train (100h max ~ 100000 episodes done in our settings)
         envs.append(env)
-        if config_args.rl_script_args.size_action_space == 3:
-            subgoals.append(["turn left", "turn right", "go forward"])
-
-        elif config_args.rl_script_args.size_action_space == 6:
-            subgoals.append(["turn left", "turn right", "go forward",
-                             "do nothing", "cut", "think"])
-
+        if config_args.rl_script_args.modified_action_space:
+            subgoals.append(config_args.rl_script_args.new_action_space)
         else:
-            subgoals.append(["turn left", "turn right", "go forward",
-                             "eat", "dance", "sleep",
-                             "do nothing", "cut", "think"])
-
+            subgoals.append(config_args.rl_script_args.action_space)
     envs = ParallelEnv(envs)
 
     if config_args.rl_script_args.reward_shaping_beta == 0:
@@ -246,20 +323,25 @@ def main(config_args):
     else:
         reshape_reward = reward_function_shapped  # TODO ad the beta
 
-    id_expe = config_args.rl_script_args.name_experiment + \
-              '_nbr_env_{}_'.format(config_args.rl_script_args.number_envs) + \
-              '{}_'.format(config_args.rl_script_args.name_model) + \
-              'nbr_actions_{}_'.format(config_args.rl_script_args.size_action_space) + \
-              'shape_reward_beta_{}_'.format(config_args.rl_script_args.reward_shaping_beta) + \
-              'seed_{}'.format(config_args.rl_script_args.seed)
-
+    # create the folder for the agent
     model_path = os.path.join(config_args.rl_script_args.saving_path_model, id_expe)
     if not os.path.exists(model_path):
         os.makedirs(model_path)
 
+    log_path = os.path.join(config_args.rl_script_args.saving_path_logs, id_expe)
+    # create the folder for the tests results and return_per_episode
+    test_path = os.path.join(log_path, 'test')
+    if not os.path.exists(test_path):
+        os.makedirs(test_path)
+
+    test_path_env = os.path.join(test_path, config_args.rl_script_args.name_environment)
+    if not os.path.exists(test_path_env):
+        os.makedirs(test_path_env)
+        os.makedirs(os.path.join(test_path_env, 'return_per_episode'))
+
     algo = test_llm.BaseAlgo(envs, lm_server, config_args.rl_script_args.number_episodes, reshape_reward,
                              subgoals)
-    run_agent(config_args.rl_script_args, algo)
+    run_agent(config_args.rl_script_args, algo, config_args.rl_script_args.saving_path_logs, id_expe)
     lm_server.close()
 
 

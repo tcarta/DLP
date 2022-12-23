@@ -2,7 +2,6 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch
 import sys
-import numpy as np
 
 import logging
 lamorel_logger = logging.getLogger('lamorel_logger')
@@ -36,7 +35,7 @@ class Server:
             lamorel_logger.info("Using CPU on process {} (index {}".format(accelerator.process_index, self._index, devices))
         else:
             use_cpu = False
-            devices = self._compute_current_device_map(config)
+            devices = self._compute_current_device_map(config, llm_index)
             lamorel_logger.info("Devices on process {} (index {}): {}".format(accelerator.process_index, self._index, devices))
         self._model = HF_LLM(config.llm_args, devices, use_cpu)
         self._dispatcher = Dispatcher(self._llm_group, self._rl_llm_group_size - 1, self._llm_group_size,
@@ -61,33 +60,29 @@ class Server:
             self._updater = BaseUpdater(self._model)
         self.run()
 
-    def _compute_current_device_map(self, config):
-        current_process_index = accelerator.process_index
+    def _compute_current_device_map(self, config, llm_index):
         # First compute which partition of the local GPUs our current llm process should use
-        process_ids = np.arange(config.accelerate_args.num_processes)
-        machines_processes = np.array_split(process_ids, config.accelerate_args.num_machines)
-        current_machine_id = next(i for i, processes in enumerate(machines_processes)
-                                  if current_process_index in processes)
-        current_machine_processes = list(machines_processes[current_machine_id])
-        n_rl_processes = config.distributed_setup_args.n_rl_processes
-        if current_machine_processes[0] < n_rl_processes:  # It means we're sharing current node with RL process
-            n_shared_rl_processes = len([_p for _p in current_machine_processes if _p < n_rl_processes])
-            _local_llm_index = current_machine_processes.index(current_process_index) - n_shared_rl_processes
+        n_processes_per_machine = config.accelerate_args.num_processes // config.accelerate_args.num_machines
+        n_shared_rl_processes = config.distributed_setup_args.n_rl_processes % n_processes_per_machine
+        n_shared_llm_processes = n_processes_per_machine - n_shared_rl_processes
+        if llm_index < n_shared_llm_processes:  # if current process is shared with rl processes
+            _local_llm_index = (accelerator.process_index - n_shared_rl_processes) % n_processes_per_machine
         else:
-            n_shared_rl_processes = 0
-            _local_llm_index = current_machine_processes.index(current_process_index)
+            _local_llm_index = accelerator.process_index % n_processes_per_machine
 
-        # Compute how to partition local GPUs for local LLMs
-        cuda_device_ids = np.arange(torch.cuda.device_count())
-        processes_devices = np.array_split(cuda_device_ids, len(current_machine_processes) - n_shared_rl_processes)
-        current_process_devices = list(processes_devices[_local_llm_index])
-        if len(current_process_devices) > config.llm_args.model_parallelism_size:
-            lamorel_logger.info(
-                f"{len(current_process_devices)} gpus available for current LLM but using only model_parallelism_size "
-                f"= {config.llm_args.model_parallelism_size}")
-            current_process_devices = current_process_devices[:config.llm_args.model_parallelism_size]
+        # Compute partitions of local GPUs
+        if config.distributed_setup_args.n_llm_processes < n_processes_per_machine:
+            n_devices_per_llm = torch.cuda.device_count() // config.distributed_setup_args.n_llm_processes
+        else:
+            n_devices_per_llm = torch.cuda.device_count() // n_processes_per_machine
 
-        return current_process_devices
+        n_devices_per_llm = min(n_devices_per_llm, config.llm_args.model_parallelism_size)
+        lamorel_logger.info(f"Using min(number of accessible gpus, model_parallelism_size) = {n_devices_per_llm} gpus")
+
+        start_device = _local_llm_index * n_devices_per_llm
+        devices = [i for i in range(start_device, start_device + n_devices_per_llm)]
+        return devices
+
 
     def _process_calls(self, calls):
         instruction = calls[0]

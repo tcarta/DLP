@@ -327,7 +327,7 @@ class LevelGen(RoomGridLevel):
             instr_kinds=self.instr_kinds
         )
 
-    def add_locked_room(self):
+    def add_locked_room(self, color):
         # Until we've successfully added a locked room
         while True:
             i = self._rand_int(0, self.num_cols)
@@ -342,6 +342,7 @@ class LevelGen(RoomGridLevel):
             door, _ = self.add_door(
                 i, j,
                 door_idx,
+                color=color,
                 locked=True
             )
 
@@ -380,11 +381,12 @@ class LevelGen(RoomGridLevel):
             type = self._rand_elem(types)
 
             loc = None
-            if self.locations and self._rand_bool():
+            if self.locations:
                 loc = self._rand_elem(LOC_NAMES)
+                desc = ObjDesc(type, color, loc)
 
-            desc = ObjDesc(type, color, loc)
-
+            else:
+                desc = ObjDesc(type, color)
             # Find all objects matching the descriptor
             objs, poss = desc.find_matching_objs(self)
 
@@ -395,10 +397,10 @@ class LevelGen(RoomGridLevel):
             # If no implicit unlocking is required
             if not self.implicit_unlock and self.locked_room:
                 # Check that at least one object is not in the locked room
-                pos_not_locked = list(filter(
-                    lambda p: not self.locked_room.pos_inside(*p),
-                    poss
-                ))
+                for idx in range(4):
+                    if self.locked_room.neighbors[idx] is not None:
+                        pos_not_locked = self.locked_room.neighbors[idx].objs
+                        break
 
                 if len(pos_not_locked) == 0:
                     continue

@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed_%a 				# job name
-#SBATCH --time=20:00:00             										        # maximum execution time (HH:MM:SS)
-#SBATCH --output=slurm_logs/llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed_%a-%j.out            # output file name
-#SBATCH --error=slurm_logs/llm_gtl_nbr_env_32_Flan_T5small_nbr_actions_3_shape_reward_beta_0_seed_%a-%j.err             # err file name
-#SBATCH --account=imi@a100
+#SBATCH --job-name=llm_gtl_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0_seed_%a    # job name
+#SBATCH --time=20:00:00              										        					     # maximum execution time (HH:MM:SS)
+#SBATCH --output=slurm_logs/llm_gtl_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0_seed_%a-%j.out     # output file name
+#SBATCH --error=slurm_logs/llm_gtl_nbr_env_32_Flan_T5small_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0_seed_%a-%j.err      # err file name
+#SBATCH --account=imi@v100
 #SBATCH --qos=qos_gpu-t3
-#SBATCH -C a100
+#SBATCH -C v100-32g
 #SBATCH --gres=gpu:4
-#SBATCH --cpus-per-task=64
+#SBATCH --cpus-per-task=40
 #SBATCH --hint=nomultithread
 #SBATCH --ntasks-per-node=1
 #SBATCH --nodes=1
@@ -24,17 +24,15 @@ srun dlp/slurm/launcher.sh \
                     rl_script_args.path=$WORK/code/DLP/dlp/main.py \
                     rl_script_args.seed=${SLURM_ARRAY_TASK_ID} \
                     rl_script_args.number_envs=32 \
-                    rl_script_args.size_action_space=3 \
+                    rl_script_args.num_steps=400000 \
+                    rl_script_args.action_space=["turn_left","turn_right","go_forward"] \
                     rl_script_args.saving_path_logs=$WORK/code/DLP/storage/logs \
                     rl_script_args.name_experiment='llm_gtl' \
-                    rl_script_args.name_model='Flan_T5small_action-heads_trained-embedding' \
+                    rl_script_args.name_model='Flan_T5small' \
+                    rl_script_args.template_test=2 \
                     rl_script_args.saving_path_model=$SCRATCH/DLP/models \
-                    rl_script_args.load_embedding=true \
-                    rl_script_args.use_action_heads=true \
-                    lamorel_args.allow_subgraph_use_whith_gradient=false \
                     lamorel_args.llm_args.model_type=seq2seq \
                     lamorel_args.llm_args.model_path=/gpfsscratch/rech/imi/ucy39hi/saycan-scienceworld/llms/flan-t5-small \
-                    lamorel_args.llm_args.pretrained=false \
                     lamorel_args.llm_args.model_parallelism_size=1 \
                     lamorel_args.llm_args.minibatch_size=3 \
                     lamorel_args.accelerate_args.num_machines=1 \

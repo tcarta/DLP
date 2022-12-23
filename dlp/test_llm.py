@@ -117,7 +117,7 @@ class BaseAlgo(ABC):
             head_prompt += " {},".format(sg)
         head_prompt = head_prompt[:-1]
 
-        # translate goal in french
+        # translate goal in French
         dico_traduc_det = {"the": "la",
                            'a': 'une'}
         dico_traduc_names = {"box": "boîte",
@@ -224,16 +224,15 @@ class BaseAlgo(ABC):
                     proba_dist.append(F.softmax(scores[j] / scores_max[j], dim=-1).unsqueeze(dim=0))
 
             proba_dist = torch.cat(proba_dist, dim=0)
-            action = proba_dist.argmax(dim=1)
+            dist = Categorical(probs=proba_dist)
+            action = dist.sample()
+            # action = proba_dist.argmax(dim=1)
             a = action.cpu().numpy()
 
             for j in range(self.num_procs):
                 self.acts_queue[j].append(subgoals[j][int(a[j])])
 
-            # TODO real_a only for the test remove after
-            real_a = np.copy(a)
-            real_a[real_a > 2] = 6
-            obs, reward, done, self.infos = self.env.step(real_a)
+            obs, reward, done, self.infos = self.env.step(a)
 
             for j in range(self.num_procs):
                 if done[j]:
@@ -275,6 +274,8 @@ class BaseAlgo(ABC):
                     self.log_done_counter += 1
                     pbar.update(1)
                     self.log_return.append(self.log_episode_return[i].item())
+                    if self.log_episode_return[i].item() > 0:
+                        print(self.obs[i]['mission'])
                     self.log_reshaped_return.append(self.log_episode_reshaped_return[i].item())
                     self.log_reshaped_return_bonus.append(self.log_episode_reshaped_return_bonus[i].item())
                     self.log_num_frames.append(self.log_episode_num_frames[i].item())
@@ -285,8 +286,6 @@ class BaseAlgo(ABC):
             self.log_episode_num_frames *= self.mask
 
         pbar.close()
-        # Flatten the data correctly, making sure that
-        # each episode's data is a continuous chunk
 
         # Log some values
 
