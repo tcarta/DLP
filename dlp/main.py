@@ -25,6 +25,8 @@ import babyai.rl
 import babyai.utils as utils
 from babyai.paral_env_simple import ParallelEnv
 
+from agents.drrn.drrn import DRRN_Agent
+
 from lamorel import Caller, lamorel_init
 from lamorel import BaseUpdater, BaseModuleFunction
 
@@ -35,7 +37,6 @@ import hydra
 from accelerate import Accelerator
 
 accelerator = Accelerator()
-
 
 # TODO add the value of the true reward *20 who should receive the final reward?
 def reward_function(subgoal_proba=None, reward=None, policy_value=None, llm_0=None):
@@ -70,13 +71,13 @@ class ValueModuleFn(BaseModuleFunction):
 
     def forward(self, forward_outputs, minibatch, tokenized_context, **kwargs):
         if self._model_type == "causal":
-            model_head = forward_outputs['hidden_states'][0][0, len(tokenized_context["input_ids"]) - 1, :]
+            model_head = forward_outputs['hidden_states'][-1][:, len(tokenized_context["input_ids"]) - 1, :]
         else:
-            model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+            # model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+            model_head = forward_outputs["decoder_hidden_states"][-1][:, 0, :]
 
         value = self.value_head_op(model_head.to(self.device))
         return value.cpu()
-
 
 class ActionHeadsModuleFn(BaseModuleFunction):
     def __init__(self, model_type, action_space_size):
@@ -97,9 +98,10 @@ class ActionHeadsModuleFn(BaseModuleFunction):
     def forward(self, forward_outputs, minibatch, tokenized_context, **kwargs):
         # Get encoder's representation
         if self._model_type == "causal":
-            model_head = forward_outputs['hidden_states'][0][0, len(tokenized_context["input_ids"]) - 1, :]
+            model_head = forward_outputs['hidden_states'][-1][0, len(tokenized_context["input_ids"]) - 1, :]
         else:
-            model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+            # model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
+            model_head = forward_outputs["decoder_hidden_states"][-1][:, 0, :]
 
         actions_score = self.action_heads_op(model_head)
         return actions_score.cpu()
@@ -221,7 +223,7 @@ class Updater(BaseUpdater):
             # Compute loss
             output = self._llm_module([kwargs["scoring_module_key"], 'value'],
                                       contexts=contexts, candidates=candidates, require_grad=True)
-            scores = torch.stack([_o[kwargs["scoring_module_key"]] for _o in output])
+            scores = torch.stack([_o[kwargs["scoring_module_key"]] for _o in output]).squeeze()
             scores_max = torch.max(scores, dim=1)[0]
             values = torch.stack([_o["value"][0] for _o in output])
 
@@ -372,20 +374,22 @@ def run_agent(args, algo, id_expe):
 @hydra.main(config_path='config', config_name='config')
 def main(config_args):
     # lm server
-    custom_lamorel_module_functions = {
-        'value': ValueModuleFn(config_args.lamorel_args.llm_args.model_type)
-    }
-    if config_args.rl_script_args.use_action_heads:
-        custom_lamorel_module_functions['policy_head'] = ActionHeadsModuleFn(
-            config_args.lamorel_args.llm_args.model_type,
-            len(config_args.rl_script_args.action_space)
-        )
-        lamorel_scoring_module_key = "policy_head"
-    else:
-        lamorel_scoring_module_key = "__score"
+    if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
+        custom_lamorel_module_functions = {
+            'value': ValueModuleFn(config_args.lamorel_args.llm_args.model_type)
+        }
+        if config_args.rl_script_args.use_action_heads:
+            custom_lamorel_module_functions['policy_head'] = ActionHeadsModuleFn(
+                config_args.lamorel_args.llm_args.model_type,
+                len(config_args.rl_script_args.action_space)
+            )
+            lamorel_scoring_module_key = "policy_head"
+        else:
+            lamorel_scoring_module_key = "__score"
 
-    lm_server = Caller(config_args.lamorel_args, custom_updater_class=Updater,
-                       custom_module_functions=custom_lamorel_module_functions)
+        lamorel_init()
+        lm_server = Caller(config_args.lamorel_args, custom_updater_class=Updater,
+                           custom_module_functions=custom_lamorel_module_functions)
 
     # Env
     name_env = config_args.rl_script_args.name_environment
@@ -429,55 +433,63 @@ def main(config_args):
     model_path = os.path.join(config_args.rl_script_args.saving_path_model, id_expe)
     if not os.path.exists(model_path):
         os.makedirs(model_path)
-
-    if os.path.exists(config_args.rl_script_args.saving_path_model + "/" + id_expe + "/last/model.checkpoint"):
-        # if model.checkpoint already exists that means update =! 0 and we reload the weights of the fine-tuned model
-        lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                         [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                         id_expe=id_expe, load_fine_tuned_version=True,
-                         saving_path_model=config_args.rl_script_args.saving_path_model)
-
-    else:
-        # in the case the model is not pretrained if necessary loads embedding
-        os.makedirs(os.path.join(model_path, 'last'))
-        os.makedirs(os.path.join(model_path, 'backup'))
-        if not config_args.lamorel_args.llm_args.pretrained and config_args.rl_script_args.load_embedding:
+    if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
+        if os.path.exists(config_args.rl_script_args.saving_path_model + "/" + id_expe + "/last/model.checkpoint"):
+            # if model.checkpoint already exists that means update =! 0 and we reload the weights of the fine-tuned model
             lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
                              [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                             load_embedding=True, id_expe=id_expe,
-                             llm_path=config_args.lamorel_args.llm_args.model_path,
-                             saving_path_model=config_args.rl_script_args.saving_path_model,
-                             lr=config_args.rl_script_args.lr,
-                             beta1=config_args.rl_script_args.beta1,
-                             beta2=config_args.rl_script_args.beta2,
-                             adam_eps=config_args.rl_script_args.adam_eps)
+                             id_expe=id_expe, load_fine_tuned_version=True,
+                             saving_path_model=config_args.rl_script_args.saving_path_model)
+
         else:
-            # save a first version of the llm that will after the first update become the first backup
-            lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                             [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                             save_first_last=True, id_expe=id_expe,
-                             saving_path_model=config_args.rl_script_args.saving_path_model,
-                             lr=config_args.rl_script_args.lr,
-                             beta1=config_args.rl_script_args.beta1,
-                             beta2=config_args.rl_script_args.beta2,
-                             adam_eps=config_args.rl_script_args.adam_eps)
+            # in the case the model is not pretrained if necessary loads embedding
+            os.makedirs(os.path.join(model_path, 'last'))
+            os.makedirs(os.path.join(model_path, 'backup'))
+            if not config_args.lamorel_args.llm_args.pretrained and config_args.rl_script_args.load_embedding:
+                lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                                 [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                                 load_embedding=True, id_expe=id_expe,
+                                 llm_path=config_args.lamorel_args.llm_args.model_path,
+                                 saving_path_model=config_args.rl_script_args.saving_path_model,
+                                 lr=config_args.rl_script_args.lr,
+                                 beta1=config_args.rl_script_args.beta1,
+                                 beta2=config_args.rl_script_args.beta2,
+                                 adam_eps=config_args.rl_script_args.adam_eps)
+            else:
+                # save a first version of the llm that will after the first update become the first backup
+                lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                                 [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                                 save_first_last=True, id_expe=id_expe,
+                                 saving_path_model=config_args.rl_script_args.saving_path_model,
+                                 lr=config_args.rl_script_args.lr,
+                                 beta1=config_args.rl_script_args.beta1,
+                                 beta2=config_args.rl_script_args.beta2,
+                                 adam_eps=config_args.rl_script_args.adam_eps)
+        if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
+            if not config_args.lamorel_args.llm_args.pretrained and config_args.rl_script_args.load_embedding:
+                lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                                 [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                                 load_embedding=True, llm_path=config_args.lamorel_args.llm_args.model_path)
 
-    algo = babyai.rl.PPOAlgoLlm(envs, lm_server, lamorel_scoring_module_key,
-                                config_args.lamorel_args.distributed_setup_args.n_llm_processes,
-                                config_args.rl_script_args.frames_per_proc,
-                                config_args.rl_script_args.discount, config_args.rl_script_args.lr,
-                                config_args.rl_script_args.beta1, config_args.rl_script_args.beta2,
-                                config_args.rl_script_args.gae_lambda, config_args.rl_script_args.entropy_coef,
-                                config_args.rl_script_args.value_loss_coef, config_args.rl_script_args.max_grad_norm,
-                                config_args.rl_script_args.adam_eps, config_args.rl_script_args.clip_eps,
-                                config_args.rl_script_args.epochs, config_args.rl_script_args.batch_size,
-                                reshape_reward,
-                                config_args.rl_script_args.name_experiment,
-                                config_args.rl_script_args.saving_path_model,
-                                config_args.rl_script_args.saving_path_logs, number_envs, subgoals, id_expe,
-                                config_args.rl_script_args.template_test)
+        algo = babyai.rl.PPOAlgoLlm(envs, lm_server, lamorel_scoring_module_key,
+                                    config_args.lamorel_args.distributed_setup_args.n_llm_processes,
+                                    config_args.rl_script_args.frames_per_proc,
+                                    config_args.rl_script_args.discount, config_args.rl_script_args.lr,
+                                    config_args.rl_script_args.beta1, config_args.rl_script_args.beta2,
+                                    config_args.rl_script_args.gae_lambda, config_args.rl_script_args.entropy_coef,
+                                    config_args.rl_script_args.value_loss_coef, config_args.rl_script_args.max_grad_norm,
+                                    config_args.rl_script_args.adam_eps, config_args.rl_script_args.clip_eps,
+                                    config_args.rl_script_args.epochs, config_args.rl_script_args.batch_size,
+                                    reshape_reward,
+                                    config_args.rl_script_args.name_experiment,
+                                    config_args.rl_script_args.saving_path_model,
+                                    config_args.rl_script_args.saving_path_logs, number_envs, subgoals, id_expe,
+                                    config_args.rl_script_args.template_test)
+    else:
+        algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path, max_steps=number_envs*4)
     run_agent(config_args.rl_script_args, algo, id_expe)
-    lm_server.close()
+    if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
+        lm_server.close()
 
 
 if __name__ == '__main__':

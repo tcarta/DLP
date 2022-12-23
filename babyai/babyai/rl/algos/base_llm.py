@@ -125,7 +125,8 @@ class BaseAlgo(ABC):
         self.log_reshaped_return_bonus = [0] * self.num_procs
         self.log_num_frames = [0] * self.num_procs
 
-    def generate_prompt(self, goal, subgoals, deque_obs, deque_actions):
+    @classmethod
+    def generate_prompt(cls, goal, subgoals, deque_obs, deque_actions):
 
         ldo = len(deque_obs)
         lda = len(deque_actions)
@@ -178,7 +179,7 @@ class BaseAlgo(ABC):
                                                       candidates=self.filter_candidates_fn(self.subgoals))
             # output = self.lm_server.score(contexts=prompt, candidates=self.subgoals,
             #                               additional_module_function_keys=['value'])
-            scores = torch.stack([_o[self.llm_scoring_module_key] for _o in output])
+            scores = torch.stack([_o[self.llm_scoring_module_key] for _o in output]).squeeze()
             scores_max = torch.max(scores, dim=1)[0]
             """print("scores: {}".format(scores.shape))
             print("scores_max: {}".format(scores_max.shape))"""
