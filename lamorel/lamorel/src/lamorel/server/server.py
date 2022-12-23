@@ -15,11 +15,12 @@ from .utils import InstructionsEnum
 from accelerate import Accelerator
 
 accelerator = Accelerator()
-assert dist.is_initialized(), "torch distributed must be used!"
+
 
 class Server:
     def __init__(self, config, llm_index, llm_group, llm_master, rl_llm_group, rl_llm_group_size, custom_updater_class,
                  custom_module_functions):
+        assert dist.is_initialized(), "torch distributed must be used!"
         self._index = llm_index  # index of current process in the list of llm processes
         self._master_server_rank = llm_master
         self._is_main_server = accelerator.process_index == self._master_server_rank
