@@ -205,10 +205,15 @@ class BaseAlgo(ABC):
             for j in range(self.num_procs):
                 self.acts_queue[j].append(self.subgoals[j][int(a[j])])
 
-            # TODO real_a only for the test remove after
-            real_a = np.copy(a)
-            real_a[real_a > 2] = 6
-            obs, reward, done, self.infos = self.env.step(real_a)
+            # TODO only useful for the test on the impact of useless actions in this test we test an action space
+            #  with only the 3 first actions that are useful GoToLocation env
+            #  we add "sleep" as an action in this case
+            if "sleep" in self.subgoals[0]:
+                real_a = np.copy(a)
+                real_a[real_a > 2] = 6
+                obs, reward, done, self.infos = self.env.step(real_a)
+            else:
+                obs, reward, done, self.infos = self.env.step(a)
 
             for j in range(self.num_procs):
                 if done[j]:

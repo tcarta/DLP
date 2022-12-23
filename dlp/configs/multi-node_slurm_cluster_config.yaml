@@ -10,6 +10,7 @@ lamorel_args:
     num_machines: ???
     num_processes: ???
     main_process_ip: ???
+    main_process_port: 12345
   llm_args:
     model_type: ???
     model_path: ???
@@ -23,7 +24,7 @@ rl_script_args:
   path: ???
   seed: ???
   number_envs: ???
-  num_steps: 100
+  num_steps: ???
   max_episode_steps: 3
   simplification_str: easy
   frames_per_proc: 40
@@ -40,11 +41,13 @@ rl_script_args:
   clip_eps: 0.2
   epochs: 4
   batch_size: 64
-  size_action_space: ???
+  action_space: ???
   saving_path_logs: ???
   name_experiment: ???
   name_model: ???
   saving_path_model: ???
   name_environment: 'BabyAI-GoToLocal-v0'
+  language: 'english'
   load_embedding: false
   use_action_heads: false
+  template_test: 1

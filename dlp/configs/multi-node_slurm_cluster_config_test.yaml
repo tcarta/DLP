@@ -40,7 +40,7 @@ rl_script_args:
   clip_eps: 0.2
   epochs: 4
   batch_size: 64
-  size_action_space: ???
+  action_space: ???
   saving_path_logs: ???
   name_experiment: ???
   name_model: ???
@@ -49,3 +49,5 @@ rl_script_args:
   number_episodes: ???
   zero_shot: ???
   language: 'english'
+  modified_action_space: false
+  new_action_space: []

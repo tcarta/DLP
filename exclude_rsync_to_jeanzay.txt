@@ -19,3 +19,4 @@ storage
 slurm_logs
 plots
 useless
+old_slurms

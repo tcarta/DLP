@@ -17,4 +17,4 @@ module purge
 module load python/3.8.2
 conda activate dlp
 
-srun scripts/train_ppo_baseline.sh BabyAI-GoToLocalS8N4-v0 GTL4 ${SLURM_ARRAY_TASK_ID}
+srun scripts/train_ppo_baseline.sh BabyAI-GoToLocalS8N4-v0 GTL4 6 ${SLURM_ARRAY_TASK_ID}

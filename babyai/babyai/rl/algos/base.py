@@ -167,10 +167,13 @@ class BaseAlgo(ABC):
 
             if debug:
                 a = numpy.array([int(input())])
+                obs, reward, done, env_info = self.env.step(a)
             else:
-                a = action.cpu().numpy()
 
-            obs, reward, done, env_info = self.env.step(a)
+                a = action.cpu().numpy()
+                real_a = numpy.copy(a)
+                real_a[real_a > 6] = 6
+                obs, reward, done, env_info = self.env.step(real_a)
 
             if isinstance(env_info, tuple) and len(env_info) == 2:
                 info, pi_l_actions = env_info

@@ -19,3 +19,5 @@ exclude_rsync_from_jeanzay.txt
 exclude_rsync_to_jeanzay.txt
 requirements.txt
 plots
+old_slurms
+

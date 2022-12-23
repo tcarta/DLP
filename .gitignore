@@ -5,3 +5,4 @@ plots/
 outputs/
 notebooks/*
 !notebooks/*.ipynb
+/old_slurms/

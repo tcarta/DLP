@@ -1378,7 +1378,7 @@ class MiniGridEnv(gym.Env):
                         list_textual_descriptions.append(
                             f"You see a wall {agent_pos_vy - j} step{'s' if agent_pos_vy - j > 1 else ''} forward")
                     elif self.language == 'french':
-                        list_textual_descriptions.append("Tu vois u mur à {} pas devant".format(agent_pos_vy - j))
+                        list_textual_descriptions.append("Tu vois un mur à {} pas devant".format(agent_pos_vy - j))
                     object_seen = True
                 else:
                     object_seen = True
