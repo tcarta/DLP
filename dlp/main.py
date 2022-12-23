@@ -103,7 +103,7 @@ class ActionHeadsModuleFn(BaseModuleFunction):
             # model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
             model_head = forward_outputs["decoder_hidden_states"][-1][:, 0, :]
 
-        actions_score = self.action_heads_op(model_head)
+        actions_score = self.action_heads_op(model_head.to(self.device))
         return actions_score.cpu()
 
 
