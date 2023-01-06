@@ -9,6 +9,7 @@ lamorel_args:
     machine_rank: 0
     num_machines: 2
     num_processes: 2
+    cpu:
   llm_args:
     model_type: seq2seq
     model_path: t5-small
@@ -22,7 +23,7 @@ rl_script_args:
   path: ???
   seed: 0
   number_envs: 2
-  num_steps: 100
+  num_steps: 1000
   max_episode_steps: 3
   simplification_str: easy
   frames_per_proc: 40
@@ -39,14 +40,18 @@ rl_script_args:
   clip_eps: 0.2
   epochs: 4
   batch_size: 16
-  size_action_space: 3
+  action_space: ["turn_left","turn_right","go_forward","pick_up","drop","toggle"]
   saving_path_logs: '/home/tcarta/DLP/storage/logs'
-  name_experiment: 'llm_gtl'
+  name_experiment: 'llm_mtrl'
   name_model: 'T5small'
   saving_path_model: '/home/tcarta/DLP/storage/models'
-  name_environment: 'BabyAI-GoTo-v0'
+  name_environment: 'BabyAI-MixtTestLocal-v0'
   number_episodes: 10
-  zero_shot: False
   language: 'english'
   load_embedding: false
   use_action_heads: false
+  template_test: 1
+  zero_shot: false
+  modified_action_space: false
+  new_action_space: ["shift_left","shift_right","go_ahead","take","release","turn"]
+  spm_path: "/home/tcarta/DLP/dlp/agents/drrn/spm_models/unigram_8k.model"

@@ -13,6 +13,7 @@ from .utils.memory import PrioritizedReplayMemory, Transition, State
 import sentencepiece as spm
 
 import babyai.rl
+from dlp.test_llm import BaseAlgo
 
 # Accelerate
 from accelerate import Accelerator
@@ -21,7 +22,8 @@ device = accelerator.state.device
 
 class DRRN_Agent:
     def __init__(self, envs, subgoals, reshape_reward, spm_path, gamma=0.9, batch_size=64, memory_size=5000000,
-                 priority_fraction=0, clip=5, embedding_dim=128, hidden_dim=128, lr=0.0001, max_steps=64):
+                 priority_fraction=0, clip=5, embedding_dim=128, hidden_dim=128, lr=0.0001, max_steps=64,
+                 number_epsiodes_test=0):
         super().__init__()
         self.envs = envs
         self.subgoals = subgoals
@@ -41,6 +43,7 @@ class DRRN_Agent:
         
         # Stateful env
         obs, infos = self.envs.reset()
+        self.obs = obs
         self.n_envs = len(obs)
         self.obs_queue = [deque([], maxlen=3) for _ in range(self.n_envs)]
         self.acts_queue = [deque([], maxlen=2) for _ in range(self.n_envs)]
@@ -67,6 +70,8 @@ class DRRN_Agent:
         self.returns = [0 for _ in range(self.n_envs)]
         self.reshaped_returns = [0 for _ in range(self.n_envs)]
         self.frames_per_episode = [0 for _ in range(self.n_envs)]
+
+        self.number_episodes = number_epsiodes_test
 
     def observe(self, state, act, rew, next_state, next_acts, done):
         # self.memory.push(state, act, rew, next_state, next_acts, done)     # When using ReplayMemory
@@ -130,7 +135,13 @@ class DRRN_Agent:
         for i in tqdm(range(self.max_steps // self.n_envs), ascii=" " * 9 + ">", ncols=100):
             action_ids, action_idxs, _ = self.act(self.states, self.encoded_actions, sample=True)
             actions = [_subgoals[idx] for _subgoals, idx in zip(self.subgoals, action_idxs)]
-            obs, rewards, dones, infos = self.envs.step(action_idxs)
+            if len(self.subgoals[0]) > 6:
+                # only useful when we test the impact of the number of actions
+                real_a = np.copy(action_idxs)
+                real_a[real_a > 6] = 6
+                obs, rewards, dones, infos = self.envs.step(real_a)
+            else:
+                obs, rewards, dones, infos = self.envs.step(action_idxs)
             reshaped_rewards = [self.reshape_reward(reward=r)[0] for r in rewards]
             for j in range(self.n_envs):
                 self.returns[j] += rewards[j]
@@ -250,3 +261,83 @@ class DRRN_Agent:
     #     batches_starting_indexes = [indexes[i:i + num_indexes] for i in range(0, len(indexes), num_indexes)]
     #
     #     return batches_starting_indexes
+
+    def generate_trajectories(self, dict_modifier, language='english'):
+
+        if language == "english":
+            generate_prompt = BaseAlgo.generate_prompt_english
+            subgoals = self.subgoals
+        elif language == "french":
+            dico_traduc_act = {'turn_left': "tourner à gauche",
+                               "turn_right": "tourner à droite",
+                               "go_forward": "aller tout droit",
+                               "eat": "manger",
+                               "dance": "dancer",
+                               "sleep": "dormir",
+                               "do_nothing": "ne rien faire",
+                               "cut": "couper",
+                               "think": "penser"}
+            generate_prompt = BaseAlgo.generate_prompt_french
+            subgoals = [[BaseAlgo.prompt_modifier(sg, dico_traduc_act) for sg in sgs] for sgs in self.subgoals]
+
+        episodes_done = 0
+        pbar = tqdm(range(self.number_episodes), ascii=" " * 9 + ">", ncols=100)
+        while episodes_done < self.number_episodes:
+            # Do one agent-environment interaction
+
+            prompts = [BaseAlgo.prompt_modifier(generate_prompt(goal=self.obs[j]['mission'], subgoals=self.subgoals[j],
+                                                           deque_obs=self.obs_queue[j],
+                                                           deque_actions=self.acts_queue[j]), dict_modifier)
+                      for j in range(self.n_envs)]
+            self.states = self.build_state(prompts)
+            action_ids, action_idxs, _ = self.act(self.states, self.encoded_actions, sample=True)
+            actions = [_subgoals[idx] for _subgoals, idx in zip(self.subgoals, action_idxs)]
+
+            if len(self.subgoals[0]) > 6:
+                # only useful when we test the impact of the number of actions
+                real_a = np.copy(action_idxs)
+                real_a[real_a > 6] = 6
+                obs, rewards, dones, infos = self.envs.step(real_a)
+            else:
+                obs, rewards, dones, infos = self.envs.step(action_idxs)
+            reshaped_rewards = [self.reshape_reward(reward=r)[0] for r in rewards]
+
+            for j in range(self.n_envs):
+                self.returns[j] += rewards[j]
+                self.reshaped_returns[j] += reshaped_rewards[j]
+                self.frames_per_episode[j] += 1
+                if dones[j]:
+                    episodes_done += 1
+                    pbar.update(1)
+                    self.logs["num_frames_per_episode"].append(self.frames_per_episode[j])
+                    self.frames_per_episode[j] = 0
+                    self.logs["return_per_episode"].append(self.returns[j])
+                    self.returns[j] = 0
+                    self.logs["reshaped_return_per_episode"].append(self.reshaped_returns[j])
+                    self.logs["reshaped_return_bonus_per_episode"].append(self.reshaped_returns[j])
+                    self.reshaped_returns[j] = 0
+                    # reinitialise memory of past observations and actions
+                    self.obs_queue[j].clear()
+                    self.acts_queue[j].clear()
+                else:
+                    self.acts_queue[j].append(actions[j])
+                    self.obs_queue[j].append(infos[j]['descriptions'])
+
+            self.obs = obs
+            """next_prompts = [babyai.rl.PPOAlgoLlm.generate_prompt(goal=obs[j]['mission'], subgoals=self.subgoals[j],
+                                                                 deque_obs=self.obs_queue[j], deque_actions=self.acts_queue[j])
+                            for j in range(self.n_envs)]
+            next_states = self.build_state(next_prompts)
+
+            self.states = next_states"""
+            # self.logs["num_frames"] += self.n_envs
+        pbar.close()
+
+        logs = {}
+        for k, v in self.logs.items():
+            if isinstance(v, list):
+                logs[k] = v[:-episodes_done]
+            else:
+                logs[k] = v
+        logs["episodes_done"] = episodes_done
+        return logs

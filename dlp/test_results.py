@@ -15,11 +15,16 @@ def print_test_results():
         print('NAME TESTS: {}'.format(test_name))
         l = []
         for model_name in ['.*llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']:
+        # for model_name in ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']:
             for directory in list_dir:
                 if re.match(model_name, directory):
-                    # a = np.load(root+'/'+directory+'/test'+'/return_per_episode/'+test_name+'.npy')
-                    # print(a)
-                    l.append(np.load(root+'/'+directory+'/test'+'/BabyAI-PickUpSeqGoToLocal-v0'+'/return_per_episode/'+test_name+'.npy'))
+                    # l.append(np.load(root+'/'+directory+'/test'+'/BabyAI-MixtTrainLocal-v0'+'/return_per_episode/'+test_name + '.npy'))
+                    # l.append(np.load(root+'/'+directory+'/test'+'/BabyAI-MixtTrainLocal-v0'+'/return_per_episode/'+test_name + '_zero_shot' + '.npy'))
+                    l.append(np.load(root+'/'+directory+'/test'+'/BabyAI-MixtTestLocal-v0'+'/return_per_episode/'+test_name + '_zero_shot' + '.npy'))
+                    # l.append(np.load(root+'/'+directory+'/test'+'/BabyAI-PickUpSeqPickUpLocal-v0'+'/return_per_episode/'+test_name + '_zero_shot' + '.npy'))
+                    # l.append(np.load(root+'/'+directory+'/test'+'/BabyAI-GoToFrench-v0'+'/return_per_episode/'+test_name + '.npy'))
+                    # l.append(np.load(root+'/'+directory+'/test'+'/BabyAI-GoToFrench-v0'+'/return_per_episode/'+test_name + '_zero_shot' + '.npy'))
+                    # l.append(np.load(root+'/'+directory+'/test'+'/BabyAI-MixtTrainLocal-v0'+'/return_per_episode/'+test_name + 'shift_left_shift_right_go_ahead_take_release_turn' + '.npy'))
         reward_array = np.concatenate(l)
         sr_array = (reward_array > 0).astype(int)
         """plt.hist(reward_array, bins=100)

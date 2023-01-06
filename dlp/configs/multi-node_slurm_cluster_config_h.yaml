@@ -23,7 +23,7 @@ rl_script_args:
   path: ???
   seed: ???
   number_envs: ???
-  num_steps: 100
+  num_steps: ???
   max_episode_steps: 3
   simplification_str: easy
   frames_per_proc: 40

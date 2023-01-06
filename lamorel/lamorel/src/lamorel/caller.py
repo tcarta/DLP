@@ -8,7 +8,7 @@ import logging
 lamorel_logger = logging.getLogger('lamorel_logger')
 
 accelerator = Accelerator()
-assert dist.is_initialized(), "torch distributed must be used!"
+
 
 
 class Caller:
@@ -18,6 +18,7 @@ class Caller:
     If the current process belongs to the LLM's processes, it will launch the LLM and wait for requests.
     '''
     def __init__(self, config, custom_updater_class=None, custom_module_functions={}):
+        assert dist.is_initialized(), "torch distributed must be used!"
         self.__config = config
         self.__grad_fn_model = None
 

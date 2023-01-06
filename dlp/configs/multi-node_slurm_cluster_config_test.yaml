@@ -51,3 +51,4 @@ rl_script_args:
   language: 'english'
   modified_action_space: false
   new_action_space: []
+  spm_path: "$WORK/code/DLP/dlp/agents/drrn/spm_models/unigram_8k.model"
