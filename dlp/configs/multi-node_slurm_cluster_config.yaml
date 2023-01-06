@@ -51,4 +51,4 @@ rl_script_args:
   load_embedding: false
   use_action_heads: false
   template_test: 1
-  spm_path: "$WORK/code/DLP/dlp/agents/drrn/spm_models/unigram_8k.model"
+  spm_path: ''

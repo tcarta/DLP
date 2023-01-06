@@ -72,15 +72,16 @@ def plot_average_impl(df, regexps, labels, limits, colors, y_value='return_mean'
         print(regex, median_progress, mean_duration / 86400.0, values.iloc[-1])
         print("{} sample efficiency: {}".format(label, values.sum() / len(values)))
 
-def plot_se(df, regexps, limits, y_value='return_mean', x_value='frames'):
+
+def plot_average_impl_ax(df, regexps, ax, labels, limits, colors, y_value='return_mean', window=10, agg='mean',
+                      x_value='frames'):
     """Plot averages over groups of runs  defined by regular expressions."""
     df = df.dropna(subset=[y_value])
     unique_models = df['model'].unique()
     model_groups = [[m for m in unique_models if re.match(regex, m)]
                     for regex in regexps]
 
-    SE = []
-    for regex, models in zip(regexps, model_groups):
+    for regex, models, label, color in zip(regexps, model_groups, labels, colors):
         # print("regex: {}".format(regex))
         print(models)
         df_re = df[df['model'].isin(models)]
@@ -99,41 +100,36 @@ def plot_se(df, regexps, limits, y_value='return_mean', x_value='frames'):
         parts = []
         for _, df_model in df_re.groupby('model'):
             df_model = df_model.copy()
-            df_model.loc[:, y_value] = df_model[y_value].mean()
+            df_model.loc[:, y_value] = df_model[y_value].rolling(window).mean()
             parts.append(df_model)
         df_re = pd.concat(parts)
         df_agg = df_re.groupby([x_value]).mean()
+        # df_max = df_re.groupby([x_value]).max()[y_value]
+        # df_min = df_re.groupby([x_value]).min()[y_value]
         values = df_agg[y_value]
-        SE.append(round(values.sum()/len(values), 3))
+        std = df_re.groupby([x_value]).std()[y_value]
+        # print(std.iloc[-1])
+        df_max = values + std
+        df_min = values - std
 
-    return np.array(SE)
+        # pyplot.plot(df_agg.index, values, label='{} SE: {}'.format(label, round(values.sum()/len(values), 3)))
+        print(("{} last mean:{} last std: {}").format(label, values.iloc[-1], std.iloc[-1]))
+        ax.plot(df_agg.index, values, label=label, color=color)
+        # pyplot.plot(df_agg.index, values, label=label)
+        ax.fill_between(df_agg.index, df_max, df_min, alpha=0.25, color=color)
+        print(regex, median_progress, mean_duration / 86400.0, values.iloc[-1])
+        print("{} sample efficiency: {}".format(label, values.sum() / len(values)))
 
 
 dfs = load_logs('/home/tcarta/DLP/storage')
 df = pd.concat(dfs, sort=True)
 
 
-def plot_SE_function_of_variable(df, regexs, limits, **kwargs):
-    """Plot the Sample Efficiency against a variable (nbr distractors, size action space)
-    The final Success Rate is added"""
-    plt.figure(figsize=(7.5, 5))
-
-    for color, label, marker, rgs in zip(kwargs['colors'], kwargs['labels'], kwargs['markers'], regexs):
-        SE = plot_se(df, rgs, limits, y_value='success_rate')
-        plt.plot(kwargs['x_range'], SE, color=color, label=label, marker=marker)
-
-    plt.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
-    plt.xlabel(kwargs['xlabel'], fontsize=15)
-    plt.ylabel("Sample Efficiency")
-    plt.title("Sample efficiency depending of {}".format(kwargs['xlabel']), fontsize=15)
-    plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.show()
-
 def plot_average(*args, **kwargs):
     """Plot averages over groups of runs  defined by regular expressions."""
     plt.figure(figsize=(7.5, 5))
     plot_average_impl(y_value='return_mean', *args, **kwargs)
+    # plt.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11}, bbox_to_anchor=(1.1, 1.1))
     plt.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
     plt.xlabel("Frames", fontsize=15)
 
@@ -210,7 +206,6 @@ def plot_value_loss_average(*args, **kwargs):
     plt.yticks(fontsize=10)
     plt.show()
 
-
 def plot_grad_norm_average(*args, **kwargs):
     """Plot averages over groups of runs  defined by regular expressions."""
     plt.figure(figsize=(7.5, 5))
@@ -223,8 +218,6 @@ def plot_grad_norm_average(*args, **kwargs):
     plt.yticks(fontsize=10)
     plt.show()
 
-
-
 # #######################MTRL############################################################## #
 regexs = ['.*llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
           '.*llm_mtrl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -234,7 +227,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5', 'DRRN', 'Symbolic-PPO']
 # limits = 3500000
 limits = 1500000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey']
-plot_average(df, regexs, labels, limits, colors)
+# plot_average(df, regexs, labels, limits, colors)
 plot_sucess_rate_average(df, regexs, labels, limits, colors)
 
 regexs = ['.*llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
@@ -274,7 +267,7 @@ labels = ['GFLAN-T5', 'AFLAN-T5', 'NPAE-FLAN-T5', 'NPA-FLAN-T5', 'NPE-FLAN-T5']
 limits = 500000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey']
 # plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
 # plot_entropy_average(df, regexs, labels, limits, colors)
 # plot_value_loss_average(df, regexs, labels, limits, colors)
 
@@ -292,7 +285,7 @@ labels = ['GFLAN-T5-xl', 'GFLAN-T5-large', 'GFLAN-T5-small', 'NPAE-FLAN-T5-large
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey', 'tab:pink']
 # plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_sucess_rate_average(df, regexs, labels, limits, colors)
 
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xl_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -306,21 +299,11 @@ colors = ['tab:blue', 'tab:orange', 'tab:green']
 # plot_value_loss_average(df, regexs, labels, limits, colors)
 # plot_grad_norm_average(df, regexs, labels, limits, colors)
 
-# ####################### Performance function of the type of the LLM's training data ######################## #
-# ####################### LLM_large ######################## #
-regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-          '.*llm_gtl_nbr_env_32_GPT2large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
-labels = ['FLAN-T5-large', 'GPT2-large']
-limits = 400000
-colors = ['tab:blue', 'tab:orange']
-# plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
-# plot_entropy_average(df, regexs, labels, limits, colors)
-
-
 # ####################### Performance function of the number of actions ######################## #
 # ####################### GoToLocation env ######################## #
 # ####################### LLM_large ######################## #
+
+fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(nrows=2, ncols=2, figsize=(12.5, 10))
 
 # ####################### 3 actions ######################## #
 
@@ -331,8 +314,15 @@ regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_3_turn_
 labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
-# plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+plot_average_impl_ax(df, regexs, ax0, labels, limits, colors, y_value='success_rate')
+ax0.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
+ax0.set_xlabel("Frames", fontsize=15)
+
+ax0.set_title("Restricted", fontsize=15)
+ax0.set_xticks(np.arange(stop=400001, step=50000), fontsize=10)
+ax0.set_yticks(np.arange(start=0.2, stop=1, step=0.1), fontsize=10)
+ax0.grid()
 
 # ####################### 6 actions ######################## #
 
@@ -343,8 +333,15 @@ regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_
 labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
-# plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+plot_average_impl_ax(df, regexs, ax1, labels, limits, colors, y_value='success_rate')
+ax1.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
+ax1.set_xlabel("Frames", fontsize=15)
+
+ax1.set_title("Canonical", fontsize=15)
+ax1.set_xticks(np.arange(stop=400001, step=50000), fontsize=10)
+ax1.set_yticks(np.arange(start=0.2, stop=1, step=0.1), fontsize=10)
+ax1.grid()
 
 # ####################### 9 actions ######################## #
 
@@ -355,49 +352,47 @@ regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_9_turn_
 labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
-# plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+plot_average_impl_ax(df, regexs, ax2, labels, limits, colors, y_value='success_rate')
+ax2.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
+ax2.set_xlabel("Frames", fontsize=15)
+
+ax2.set_title("Augmented", fontsize=15)
+ax2.set_xticks(np.arange(stop=400001, step=50000), fontsize=10)
+ax2.set_yticks(np.arange(start=0.2, stop=1, step=0.1), fontsize=10)
+ax2.grid()
 
 # ####################### LLM_mixt ######################## #
 
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0.*',
-          '.*GTL-nbr_actions-3-PPO-NoPre.*',
-          '.*GTL-nbr_actions-6-PPO-NoPre.*',
-          '.*GTL-nbr_actions-9-PPO-NoPre.*']
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0.*']
 labels = ['GFLAN-T5-large 3 actions', 'GFLAN-T5-large 6 actions', 'GFLAN-T5-large 9 actions',
-          'Symbolic-PPO 3 actions', 'Symbolic-PPO 6 actions', 'Symbolic-PPO 9 actions']
+          'NPAE-FLAN-T5-large 3 actions', 'NPAE-FLAN-T5-large 6 actions', 'NPAE-FLAN-T5-large 9 actions']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey', 'tab:purple', 'tab:pink']
-# plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
 
-# ####################### SE ######################## #
+plot_average_impl_ax(df, regexs, ax3, labels, limits, colors, y_value='success_rate')
+ax3.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
+ax3.set_xlabel("Frames", fontsize=15)
 
-regexs = [['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
-           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0*',
-           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0*'],
-          ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
-           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0.*'],
-          ['.*drrn_gtl_nbr_env_32_DRRN_pretrained_True_nbr_actions_3_turn_left_turn_right_go_forward_shape_reward_beta_0.*',
-           '.*drrn_gtl_nbr_env_32_DRRN_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-           '.*drrn_gtl_nbr_env_32_DRRN_pretrained_True_nbr_actions_9_turn_left_turn_right_go_forward_pick_up_drop_toggle_sleep_do_nothing_think_shape_reward_beta_0.*'],
-          ['.*GTL-nbr_actions-3-PPO-NoPre.*',
-           '.*GTL-nbr_actions-6-PPO-NoPre.*',
-           '.*GTL-nbr_actions-9-PPO-NoPre.*']]
+ax3.set_title("Comparison of the 3 action spaces", fontsize=15)
+ax3.set_xticks(np.arange(stop=400001, step=50000), fontsize=10)
+ax3.set_yticks(np.arange(start=0.2, stop=1, step=0.1), fontsize=10)
+ax3.grid()
 
-labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
-limits = 400000
-markers = ['o', 'v', '^', 'P']
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
-
-plot_SE_function_of_variable(df, regexs, limits, xlabel='size action space', x_range=np.array([3, 6, 9]), labels=labels, colors=colors, markers=markers)
+fig.suptitle('Average Success Rate', fontsize=15)
+fig.tight_layout()
+plt.show()
 
 # ####################### Performance function of the number of distractors ######################## #
 # ####################### GoToLocation env ######################## #
 # ####################### LLM_large ######################## #
+
+fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(nrows=2, ncols=2, figsize=(12.5, 10))
 
 # ####################### 4 distractors ######################## #
 regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -408,8 +403,16 @@ regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_True_nbr_ac
 labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
-# plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+plot_average_impl_ax(df, regexs, ax0, labels, limits, colors, y_value='success_rate')
+ax0.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
+ax0.set_xlabel("Frames", fontsize=15)
+
+ax0.set_title("4 distractors", fontsize=15)
+ax0.set_xticks(np.arange(stop=400001, step=50000), fontsize=10)
+ax0.set_yticks(np.arange(start=0.2, stop=1, step=0.1), fontsize=10)
+ax0.grid()
+
 
 # ####################### 8 distractors ######################## #
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -420,8 +423,15 @@ regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_
 labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
-# plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+plot_average_impl_ax(df, regexs, ax1, labels, limits, colors, y_value='success_rate')
+ax1.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
+ax1.set_xlabel("Frames", fontsize=15)
+
+ax1.set_title("8 distractors", fontsize=15)
+ax1.set_xticks(np.arange(stop=400001, step=50000), fontsize=10)
+ax1.set_yticks(np.arange(start=0.2, stop=1, step=0.1), fontsize=10)
+ax1.grid()
 
 # ####################### 16 distractors ######################## #
 regexs = ['.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -432,43 +442,41 @@ regexs = ['.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_True_nbr_a
 labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
-# plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+
+plot_average_impl_ax(df, regexs, ax2, labels, limits, colors, y_value='success_rate')
+ax2.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
+ax2.set_xlabel("Frames", fontsize=15)
+
+ax2.set_title("16 distractors", fontsize=15)
+ax2.set_xticks(np.arange(stop=400001, step=50000), fontsize=10)
+ax2.set_yticks(np.arange(start=0.2, stop=1, step=0.1), fontsize=10)
+ax2.grid()
 
 # ####################### Mixt ######################## #
 regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
           '.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-          '.*GTL4-nbr_actions-6-PPO-NoPre.*',
-          '.*GTL-nbr_actions-6-PPO-NoPre.*',
-          '.*GTL16-nbr_actions-6-PPO-NoPre.*']
+          '.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
+
 labels = ['GFLAN-T5-large 4 distractors', 'GFLAN-T5-large 8 distractors', 'GFLAN-T5-large 16 distractors',
-          'Symbolic-PPO 4 distractors', 'Symbolic-PPO 8 distractors', 'Symbolic-PPO 16 distractors']
+          'NPAE-FLAN-T5-large 4 distractors', 'NPAE-FLAN-T5-large 8 distractors', 'NPAE-FLAN-T5-large 16 distractors']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:grey', 'tab:green', 'tab:purple', 'tab:pink']
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
 
-# ####################### SE ######################## #
+plot_average_impl_ax(df, regexs, ax3, labels, limits, colors, y_value='success_rate')
+ax3.legend(handlelength=0.5, handleheight=0.5, prop={"size": 11})
+ax3.set_xlabel("Frames", fontsize=15)
 
-regexs = [['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-          '.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*'],
-          ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-           '.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_False_load_embedding_True_use_action_heads_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*'],
-          ['.*drrn_gtl_distractor_4_nbr_env_32_DRRN_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-          '.*drrn_gtl_nbr_env_32_DRRN_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
-          '.*drrn_gtl_distractor_16_nbr_env_32_DRRN_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*'],
-          ['.*GTL4-nbr_actions-6-PPO-NoPre.*',
-           '.*GTL-nbr_actions-6-PPO-NoPre.*',
-           '.*GTL16-nbr_actions-6-PPO-NoPre.*']]
+ax3.set_title("Comparison for 3 number of distractors", fontsize=15)
+ax3.set_xticks(np.arange(stop=400001, step=50000), fontsize=10)
+ax3.set_yticks(np.arange(start=0.2, stop=1, step=0.1), fontsize=10)
+ax3.grid()
 
-labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
-limits = 400000
-markers = ['o', 'v', '^', 'P']
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
-
-plot_SE_function_of_variable(df, regexs, limits, xlabel='number of distractors', x_range=np.array([4, 8, 16]), labels=labels, colors=colors, markers=markers)
+fig.suptitle('Average Success Rate', fontsize=15)
+fig.tight_layout()
+plt.show()
 
 # ####################### Distribution shift study 6 actions ######################## #
 # ############################## MixtTrainLocal ##################################### #
@@ -479,6 +487,8 @@ name_file = ['llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_tur
 
 nbr_test_prompts = 11
 actions = ["turn left", "turn right", "go forward", "pick up", "drop", "toggle"]
+
+fig, ax = plt.subplots(nrows=4, ncols=3, figsize=(15.6, 16))
 
 columns_names = ['{}'.format(i) for i in range(len(actions)*nbr_test_prompts)]
 
@@ -491,12 +501,15 @@ len_data_frame = min(distrib_large_1.shape[0], distrib_large_2.shape[0])
 for j in range(nbr_test_prompts):
     for i in range(len(actions)):
         distrib_large_action_i = 0.5*(distrib_large_1.iloc[:len_data_frame, i+6*j].values +distrib_large_2.iloc[:len_data_frame, i+6*j].values )
-        plt.plot(np.arange(len_data_frame), distrib_large_action_i, label=actions[i])
-        plt.legend()
-        plt.xlabel("updates")
-        plt.ylabel("probability")
-        plt.title('Prompt {}'.format(j))
-    plt.show()
+        ax[j//3][j % 3].plot(np.arange(len_data_frame), distrib_large_action_i, label=actions[i])
+    ax[j//3][j % 3].legend()
+    ax[j//3][j % 3].set_xlabel("updates")
+    ax[j//3][j % 3].set_ylabel("probability")
+    ax[j//3][j % 3].set_title('Prompt {}'.format(j))
+
+fig.suptitle('Policy evolution', y=0.995, fontsize=15)
+fig.tight_layout()
+plt.show()
 
 # ####################### Distribution shift study 6 actions ######################## #
 # ############################## GoToLocal ##################################### #

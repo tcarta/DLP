@@ -26,6 +26,7 @@ srun python dlp/main.py \
                     rl_script_args.name_experiment='drrn_gtl' \
                     rl_script_args.name_model='DRRN' \
                     rl_script_args.saving_path_model=$SCRATCH/DLP/models \
+                    rl_script_args.spm_path=$WORK/code/DLP/dlp/agents/drrn/spm_models/unigram_8k.model \
                     lamorel_args.distributed_setup_args.n_llm_processes=0 \
                     --config-path=$WORK/code/DLP/dlp/configs \
                     --config-name=multi-node_slurm_cluster_config 

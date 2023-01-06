@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=test_llm_psgl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0_seed_%a 		       # job name
-#SBATCH --time=00:30:00             										        					      # maximum execution time (HH:MM:SS)
+#SBATCH --time=03:30:00             										        					      # maximum execution time (HH:MM:SS)
 #SBATCH --output=slurm_logs/test_llm_psgl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0_%a-%j.out      # output file name
 #SBATCH --error=slurm_logs/test_llm_psgl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0_%a-%j.err       # err file name
 #SBATCH --account=imi@a100											
-#SBATCH --qos=qos_gpu-dev
+#SBATCH --qos=qos_gpu-t3
 #SBATCH -C a100
 #SBATCH --gres=gpu:8
 #SBATCH --cpus-per-task=32
@@ -24,7 +24,7 @@ srun dlp/slurm/launcher.sh \
                     rl_script_args.path=$WORK/code/DLP/dlp/main_test.py \
                     rl_script_args.seed=${SLURM_ARRAY_TASK_ID} \
                     rl_script_args.number_envs=32 \
-                    rl_script_args.number_episodes=500 \
+                    rl_script_args.number_episodes=1000 \
                     rl_script_args.action_space=["turn_left","turn_right","go_forward","pick_up","drop","toggle"] \
                     rl_script_args.saving_path_logs=$WORK/code/DLP/storage/logs \
                     rl_script_args.name_experiment='llm_mtrl' \

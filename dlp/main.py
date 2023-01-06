@@ -474,11 +474,6 @@ def main(config_args):
                                  beta1=config_args.rl_script_args.beta1,
                                  beta2=config_args.rl_script_args.beta2,
                                  adam_eps=config_args.rl_script_args.adam_eps)
-        if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
-            if not config_args.lamorel_args.llm_args.pretrained and config_args.rl_script_args.load_embedding:
-                lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                                 [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                                 load_embedding=True, llm_path=config_args.lamorel_args.llm_args.model_path)
 
         algo = babyai.rl.PPOAlgoLlm(envs, lm_server, lamorel_scoring_module_key,
                                     config_args.lamorel_args.distributed_setup_args.n_llm_processes,

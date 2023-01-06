@@ -20,6 +20,9 @@ from colorama import Fore
 from lamorel import Caller, lamorel_init
 from lamorel import BaseUpdater, BaseModuleFunction
 from accelerate import Accelerator
+from main import ValueModuleFn
+
+from agents.drrn.drrn import DRRN_Agent
 
 lamorel_init()
 logger = logging.getLogger(__name__)
@@ -42,80 +45,7 @@ def reward_function_shapped(subgoal_proba=None, reward=None, policy_value=None, 
         return [-1 - np.log(subgoal_proba / policy_value), -1 - np.log(subgoal_proba / policy_value)]
 
 
-class ValueModuleFn(BaseModuleFunction):
-
-    def __init__(self, model_type):
-        super().__init__()
-        self._model_type = model_type
-
-    def initialize(self):
-        llm_hidden_size = self.llm_config.to_dict()[self.llm_config.attribute_map['hidden_size']]
-        self.value_head_op = torch.nn.Sequential(
-            torch.nn.Linear(llm_hidden_size, 1024),
-            torch.nn.Sigmoid(),
-            torch.nn.Linear(1024, 1024),
-            torch.nn.Sigmoid(),
-            torch.nn.Linear(1024, 1),
-        ).to(self.device)
-
-    def forward(self, forward_outputs, minibatch, tokenized_context, **kwargs):
-        if self._model_type == "causal":
-            model_head = forward_outputs['hidden_states'][0][0, len(tokenized_context["input_ids"]) - 1, :]
-        else:
-            model_head = forward_outputs['encoder_last_hidden_state'][0, len(tokenized_context["input_ids"]) - 1, :]
-
-        value = self.value_head_op(model_head.to(self.device))
-        return value.cpu()
-
-
-"""dict_modifier_english = [{},
-                         {
-                             'key': 'chair',
-                             'ball': 'table',
-                             'box': 'car'
-                         },
-                         {
-                             'red': 'vermilion',
-                             'green': 'jade',
-                             'blue': 'cyan',
-                             'purple': 'violet',
-                             'yellow': 'golden',
-                             'grey': 'silver'
-                         },
-                         {
-                             'key': 'dax',
-                             'ball': 'xolo',
-                             'box': 'afze'
-                         },
-                         {
-                             'red': 'faze',
-                             'green': 'jatu',
-                             'blue': 'croh',
-                             'purple': 'vurst',
-                             'yellow': 'gakul',
-                             'grey': 'sil'
-                         },
-                         {
-                             'key': 'dax',
-                             'ball': 'xolo',
-                             'box': 'afze',
-                             'red': 'faze',
-                             'green': 'jatu',
-                             'blue': 'croh',
-                             'purple': 'vurst',
-                             'yellow': 'gakul',
-                             'grey': 'sil'
-                         },
-                         {
-                             "to": "face",
-                             "Observation": "viewing",
-                             "the": "some",
-                             "A": "One",
-                             ":": "",
-                             "go": ""
-                         }]
-
-dict_modifier_french = [{},
+"""dict_modifier_french = [{},
                         {
                             'clef': 'chaise',
                             'balle': 'table',
@@ -157,12 +87,46 @@ dict_dict_modifier = {'english': dict_modifier_english, 'french': dict_modifier_
 dict_modifier_name = ['no_modifications', 'other_name_same_categories', 'adj_synonym', 'no_meaning_nouns',
                       'no_meaning_adj', 'no_meaning_words', 'important_words_suppress']"""
 
-"""dict_modifier_english = [{"go to": "reach"},
-                         {"go to": "face"},
-                         {"Goal of the agent": "I would like the agent to"},
-                         {"Goal of the agent": "You have to"}]
-dict_modifier_name = ['predicate_synonym_reach', 'predicate_synonym_face', "change_intro_first_personne_speaker",
-                      "change_intro_first_personne_agent"]"""
+dict_modifier_french = [{},
+                        {
+                            'clef': 'chaise',
+                            'balle': 'table',
+                            'boîte': 'voiture'
+                        },
+                        {
+                            'rouge': 'vermilion',
+                            'verte': 'jade',
+                            'bleue': 'cyan',
+                            'violette': 'mauve',
+                            'jaune': 'dorée',
+                            'gris': 'argent'
+                        },
+                        {
+                            'clef': 'dax',
+                            'balle': 'xolo',
+                            'boîte': 'afze'
+                        },
+                        {
+                            'rouge': 'faze',
+                            'verte': 'jatu',
+                            'bleue': 'croh',
+                            'violette': 'vurst',
+                            'jaune': 'gakul',
+                            'grise': 'sil'
+                        },
+                        {
+                            'clef': 'dax',
+                            'balle': 'xolo',
+                            'boîte': 'afze',
+                            'rouge': 'faze',
+                            'verte': 'jatu',
+                            'bleue': 'croh',
+                            'violette': 'vurst',
+                            'jaune': 'gakul',
+                            'grise': 'sil'
+                        },
+                        {"But de l'agent": "Je veux que l'agent fasse"},
+                        {"But de l'agent": 'Tu dois faire'}]
 
 dict_modifier_english = [{},
                          {
@@ -204,11 +168,16 @@ dict_modifier_english = [{},
                          },
                          {'Goal of the agent': 'I would like the agent to'},
                          {'Goal of the agent': 'You have to'}]
+
 dict_modifier_name = ['no_modification_test', 'other_name_same_categories', 'adj_synonym', 'no_meaning_nouns',
                       'no_meaning_adj', 'no_meaning_words', 'change_intro_first_personne_speaker',
                       'change_intro_first_personne_agent']
 
-dict_dict_modifier = {'english': dict_modifier_english}
+"""dict_modifier_english = [{}]
+dict_modifier_french = [{}]
+dict_modifier_name = ['no_modification_test']"""
+
+dict_dict_modifier = {'english': dict_modifier_english, 'french': dict_modifier_french}
 
 
 class updater(BaseUpdater):
@@ -233,7 +202,7 @@ def run_agent(args, algo, saving_path_logs, id_expe):
 
     dm = dict_dict_modifier[args.language]
     for d, d_name in zip(dm, dict_modifier_name):
-        logs = algo.generate_trajectories(d, args.language)
+        exps, logs = algo.generate_trajectories(d, args.language)
 
         return_per_episode = utils.synthesize(logs["return_per_episode"])
         success_per_episode = utils.synthesize(
@@ -243,10 +212,13 @@ def run_agent(args, algo, saving_path_logs, id_expe):
         # num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
 
         if args.modified_action_space:
+            d_name += '_'
             for a in args.new_action_space:
                 d_name += a + '_'
             d_name = d_name[:-1]
 
+        if args.zero_shot:
+            d_name += '_zero_shot'
         data = [args.language, d_name, logs['episodes_done'], *return_per_episode.values(),
                 success_per_episode['mean'],
                 *reshaped_return_per_episode.values(),
@@ -259,12 +231,14 @@ def run_agent(args, algo, saving_path_logs, id_expe):
         path_test_folder = os.path.join(experiment_path, 'return_per_episode')
         np_path = os.path.join(path_test_folder, d_name)
         np.save(np_path, np.array(logs["return_per_episode"]))
+        """np.save(np_path+'_prompt', exps.prompt)
+        np.save(np_path+'_images', exps.images)
+        np.save(np_path+'_reward', exps.reward)"""
 
 
 # This will be overriden by lamorel's launcher if used
 @hydra.main(config_path='config', config_name='config')
 def main(config_args):
-
     """name_env = config_args.rl_script_args.name_environment
     for i in range(1000):
         env = gym.make(name_env)
@@ -283,7 +257,7 @@ def main(config_args):
 
     if not config_args.lamorel_args.llm_args.pretrained:
         id_expe += 'load_embedding_{}_'.format(config_args.rl_script_args.load_embedding) + \
-                  'use_action_heads_{}_'.format(config_args.rl_script_args.use_action_heads)
+                   'use_action_heads_{}_'.format(config_args.rl_script_args.use_action_heads)
 
     id_expe += 'nbr_actions_{}_'.format(len(config_args.rl_script_args.action_space))
 
@@ -295,11 +269,6 @@ def main(config_args):
 
     id_expe += 'shape_reward_beta_{}_'.format(config_args.rl_script_args.reward_shaping_beta) + \
                'seed_{}'.format(config_args.rl_script_args.seed)
-
-    if not config_args.rl_script_args.zero_shot:
-        lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                         [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
-                         id_expe=id_expe, saving_path_model=config_args.rl_script_args.saving_path_model)
 
     # Env
     name_env = config_args.rl_script_args.name_environment
@@ -339,8 +308,23 @@ def main(config_args):
         os.makedirs(test_path_env)
         os.makedirs(os.path.join(test_path_env, 'return_per_episode'))
 
-    algo = test_llm.BaseAlgo(envs, lm_server, config_args.rl_script_args.number_episodes, reshape_reward,
-                             subgoals)
+    if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
+        if not config_args.rl_script_args.zero_shot:
+            lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                             [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                             id_expe=id_expe, saving_path_model=config_args.rl_script_args.saving_path_model)
+
+        algo = test_llm.BaseAlgo(envs, lm_server, config_args.rl_script_args.number_episodes, reshape_reward,
+                                 subgoals)
+    else:
+        if not config_args.rl_script_args.zero_shot:
+            algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path,
+                              max_steps=number_envs * 4, number_epsiodes_test=config_args.rl_script_args.number_episodes)
+            algo.network.load_state_dict(torch.load()) # TODO add the loadding path
+        else:
+            algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path,
+                              max_steps=number_envs * 4)
+
     run_agent(config_args.rl_script_args, algo, config_args.rl_script_args.saving_path_logs, id_expe)
     lm_server.close()
 

@@ -6,7 +6,7 @@
 #SBATCH --account=imi@a100
 #SBATCH --qos=qos_gpu-t3
 #SBATCH -C a100
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:8
 #SBATCH --cpus-per-task=24
 #SBATCH --hint=nomultithread
 #SBATCH --ntasks-per-node=1
@@ -37,9 +37,10 @@ srun dlp/slurm/launcher.sh \
                     lamorel_args.llm_args.model_type=seq2seq \
                     lamorel_args.llm_args.model_path=/gpfsscratch/rech/imi/ucy39hi/saycan-scienceworld/llms/flan-t5-large \
                     lamorel_args.llm_args.pretrained=false \
-                    lamorel_args.llm_args.model_parallelism_size=1 \
+                    lamorel_args.llm_args.model_parallelism_size=2 \
                     lamorel_args.llm_args.minibatch_size=3 \
                     lamorel_args.accelerate_args.num_machines=1 \
                     lamorel_args.accelerate_args.num_processes=5 \
+                    lamorel_args.allow_subgraph_use_whith_gradient=false \
                     --config-path=$WORK/code/DLP/dlp/configs \
                     --config-name=multi-node_slurm_cluster_config 

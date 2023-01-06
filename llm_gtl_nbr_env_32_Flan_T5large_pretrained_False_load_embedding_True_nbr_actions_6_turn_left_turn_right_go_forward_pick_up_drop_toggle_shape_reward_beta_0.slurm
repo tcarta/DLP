@@ -39,6 +39,7 @@ srun dlp/slurm/launcher.sh \
                     lamorel_args.llm_args.minibatch_size=3 \
                     lamorel_args.accelerate_args.num_machines=1 \
                     lamorel_args.accelerate_args.num_processes=5 \
+                    lamorel_args.allow_subgraph_use_whith_gradient=false \
                     lamorel_args.accelerate_args.main_process_port=$((12345+$SLURM_ARRAY_TASK_ID)) \
                     --config-path=$WORK/code/DLP/dlp/configs \
                     --config-name=multi-node_slurm_cluster_config 

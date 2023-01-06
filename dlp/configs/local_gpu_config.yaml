@@ -53,5 +53,5 @@ rl_script_args:
   template_test: 1
   zero_shot: false
   modified_action_space: false
-  new_action_space: ["shift_left","shift_right","go_ahead","take","drop","turn"]
+  new_action_space: ["shift_left","shift_right","go_ahead","take","release","turn"]
   spm_path: "/home/tcarta/DLP/dlp/agents/drrn/spm_models/unigram_8k.model"
