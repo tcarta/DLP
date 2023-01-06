@@ -158,7 +158,8 @@ class BaseAlgo(ABC):
                 obs += "{}".format(deque_actions[i])
         return head_prompt + g + obs
 
-    def prompt_modifier(self, prompt: str, dict_changes: dict) -> str:
+    @classmethod
+    def prompt_modifier(cls, prompt: str, dict_changes: dict) -> str:
         """use a dictionary of equivalence to modify the prompt accordingly
         ex:
         prompt= 'green box red box', dict_changes={'box':'tree'}
@@ -199,14 +200,14 @@ class BaseAlgo(ABC):
                                "cut": "couper",
                                "think": "penser"}
             generate_prompt = self.generate_prompt_french
-            subgoals = [[self.prompt_modifier(sg, dico_traduc_act) for sg in sgs] for sgs in self.subgoals]
+            subgoals = [[BaseAlgo.prompt_modifier(sg, dico_traduc_act) for sg in sgs] for sgs in self.subgoals]
 
 
         pbar = tqdm(range(self.number_episodes), ascii=" " * 9 + ">", ncols=100)
         while self.log_done_counter < self.number_episodes:
             # Do one agent-environment interaction
 
-            prompt = [self.prompt_modifier(generate_prompt(goal=self.obs[j]['mission'], subgoals=subgoals[j],
+            prompt = [BaseAlgo.prompt_modifier(generate_prompt(goal=self.obs[j]['mission'], subgoals=subgoals[j],
                                                            deque_obs=self.obs_queue[j],
                                                            deque_actions=self.acts_queue[j]), dict_modifier)
                       for j in range(self.num_procs)]

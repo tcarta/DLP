@@ -12,6 +12,8 @@ from .model import DRRN
 from .utils.memory import PrioritizedReplayMemory, Transition, State
 import sentencepiece as spm
 
+import pickle
+
 import babyai.rl
 from dlp.test_llm import BaseAlgo
 
@@ -21,9 +23,9 @@ accelerator = Accelerator()
 device = accelerator.state.device
 
 class DRRN_Agent:
-    def __init__(self, envs, subgoals, reshape_reward, spm_path, gamma=0.9, batch_size=64, memory_size=5000000,
+    def __init__(self, envs, subgoals, reshape_reward, spm_path, saving_path, gamma=0.9, batch_size=64, memory_size=5000000,
                  priority_fraction=0, clip=5, embedding_dim=128, hidden_dim=128, lr=0.0001, max_steps=64,
-                 number_epsiodes_test=0):
+                 number_epsiodes_test=0, save_frequency=10):
         super().__init__()
         self.envs = envs
         self.subgoals = subgoals
@@ -72,6 +74,9 @@ class DRRN_Agent:
         self.frames_per_episode = [0 for _ in range(self.n_envs)]
 
         self.number_episodes = number_epsiodes_test
+        self.save_frequency = save_frequency
+        self.saving_path = saving_path
+        self.__inner_counter = 0
 
     def observe(self, state, act, rew, next_state, next_acts, done):
         # self.memory.push(state, act, rew, next_state, next_acts, done)     # When using ReplayMemory
@@ -174,6 +179,10 @@ class DRRN_Agent:
             # self.logs["num_frames"] += self.n_envs
 
         loss = self.update()
+        self.__inner_counter += 1
+        if self.__inner_counter % self.save_frequency == 0:
+            self.save()
+
         if loss is not None:
             self.logs["loss"] = loss.detach().cpu().item()
 
@@ -186,84 +195,7 @@ class DRRN_Agent:
         logs["episodes_done"] = episodes_done
         return logs
 
-        # # Collect experiences
-        # exps, logs = self.collect_experiences(debug=self.debug)
-        # lm_server_update_first_call = True
-        # for _ in tqdm(range(self.epochs), ascii=" " * 9 + "<", ncols=100):
-        #     # Initialize log values
-        #
-        #     log_entropies = []
-        #     log_policy_losses = []
-        #     log_value_losses = []
-        #     log_grad_norms = []
-        #
-        #     log_losses = []
-        #
-        #     # Create minibatch of size self.batch_size*self.nbr_llms
-        #     # each llm receive a batch of size batch_size
-        #     for inds in self._get_batches_starting_indexes():
-        #         # inds is a numpy array of indices that correspond to the beginning of a sub-batch
-        #         # there are as many inds as there are batches
-        #
-        #         exps_batch = exps[inds]
-        #
-        #         # return the list of dict_return calculate by each llm
-        #         list_dict_return = self.lm_server.update(exps_batch.prompt,
-        #                                                  self.filter_candidates_fn(exps_batch.subgoal),
-        #                                                  exps=dict(exps_batch),
-        #                                                  lr=self.lr,
-        #                                                  beta1=self.beta1,
-        #                                                  beta2=self.beta2,
-        #                                                  adam_eps=self.adam_eps,
-        #                                                  clip_eps=self.clip_eps,
-        #                                                  entropy_coef=self.entropy_coef,
-        #                                                  value_loss_coef=self.value_loss_coef,
-        #                                                  max_grad_norm=self.max_grad_norm,
-        #                                                  nbr_llms=self.nbr_llms,
-        #                                                  id_expe=self.id_expe,
-        #                                                  lm_server_update_first_call=lm_server_update_first_call,
-        #                                                  saving_path_model=self.saving_path_model,
-        #                                                  experiment_path=self.experiment_path,
-        #                                                  number_updates=self.number_updates,
-        #                                                  scoring_module_key=self.llm_scoring_module_key)
-        #
-        #         lm_server_update_first_call = False
-        #
-        #         log_losses.append(np.mean([d["loss"] for d in list_dict_return]))
-        #         log_entropies.append(np.mean([d["entropy"] for d in list_dict_return]))
-        #         log_policy_losses.append(np.mean([d["policy_loss"] for d in list_dict_return]))
-        #         log_value_losses.append(np.mean([d["value_loss"] for d in list_dict_return]))
-        #         log_grad_norms.append(np.mean([d["grad_norm"] for d in list_dict_return]))
-        #
-        # # Log some values
-        #
-        # logs["entropy"] = np.mean(log_entropies)
-        # logs["policy_loss"] = np.mean(log_policy_losses)
-        # logs["value_loss"] = np.mean(log_value_losses)
-        # logs["grad_norm"] = np.mean(log_grad_norms)
-        # logs["loss"] = np.mean(log_losses)
-        #
-        # return logs
-
-    # def _get_batches_starting_indexes(self):
-    #     """Gives, for each batch, the indexes of the observations given to
-    #     the model and the experiences used to compute the loss at first.
-    #     Returns
-    #     -------
-    #     batches_starting_indexes : list of lists of int
-    #         the indexes of the experiences to be used at first for each batch
-    #     """
-    #
-    #     indexes = np.arange(0, self.num_frames)
-    #     indexes = np.random.permutation(indexes)
-    #
-    #     num_indexes = self.batch_size
-    #     batches_starting_indexes = [indexes[i:i + num_indexes] for i in range(0, len(indexes), num_indexes)]
-    #
-    #     return batches_starting_indexes
-
     def generate_trajectories(self, dict_modifier, language='english'):
-
         if language == "english":
             generate_prompt = BaseAlgo.generate_prompt_english
             subgoals = self.subgoals
@@ -284,11 +216,14 @@ class DRRN_Agent:
         pbar = tqdm(range(self.number_episodes), ascii=" " * 9 + ">", ncols=100)
         while episodes_done < self.number_episodes:
             # Do one agent-environment interaction
-
-            prompts = [BaseAlgo.prompt_modifier(generate_prompt(goal=self.obs[j]['mission'], subgoals=self.subgoals[j],
-                                                           deque_obs=self.obs_queue[j],
-                                                           deque_actions=self.acts_queue[j]), dict_modifier)
-                      for j in range(self.n_envs)]
+            prompts = [
+                BaseAlgo.prompt_modifier(
+                    babyai.rl.PPOAlgoLlm.generate_prompt(goal=self.obs[j]['mission'],
+                                                         subgoals=self.subgoals[j],
+                                                         deque_obs=self.obs_queue[j],
+                                                         deque_actions=self.acts_queue[j]),
+                    dict_modifier)
+                for j in range(self.n_envs)]
             self.states = self.build_state(prompts)
             action_ids, action_idxs, _ = self.act(self.states, self.encoded_actions, sample=True)
             actions = [_subgoals[idx] for _subgoals, idx in zip(self.subgoals, action_idxs)]
@@ -340,4 +275,14 @@ class DRRN_Agent:
             else:
                 logs[k] = v
         logs["episodes_done"] = episodes_done
-        return logs
+        return None, logs
+
+    def load(self):
+        self.memory = pickle.load(open(self.saving_path + "/memory.pkl", 'rb'))
+        self.network.load_state_dict(torch.load(self.saving_path + "/model.checkpoint"))
+        self.optimizer.load_state_dict(torch.load(self.saving_path + "/optimizer.checkpoint"))
+
+    def save(self):
+        torch.save(self.network.state_dict(), self.saving_path + "/model.checkpoint")
+        torch.save(self.optimizer.state_dict(), self.saving_path + "/optimizer.checkpoint")
+        pickle.dump(self.memory, open(self.saving_path + "/memory.pkl", 'wb'))

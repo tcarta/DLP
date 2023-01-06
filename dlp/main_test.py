@@ -247,8 +247,9 @@ def main(config_args):
         print(obs['mission'])"""
 
     # lm server
-    lm_server = Caller(config_args.lamorel_args, custom_updater_class=updater,
-                       custom_module_functions={'value': ValueModuleFn(config_args.lamorel_args.llm_args.model_type)})
+    if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
+        lm_server = Caller(config_args.lamorel_args, custom_updater_class=updater,
+                           custom_module_functions={'value': ValueModuleFn(config_args.lamorel_args.llm_args.model_type)})
 
     id_expe = config_args.rl_script_args.name_experiment + \
               '_nbr_env_{}_'.format(config_args.rl_script_args.number_envs) + \
@@ -276,15 +277,17 @@ def main(config_args):
     envs = []
     subgoals = []
     number_envs = config_args.rl_script_args.number_envs
+    if config_args.rl_script_args.modified_action_space:
+        list_actions = [a for a in config_args.rl_script_args.new_action_space] # Should we replace "_"??
+    else:
+        list_actions = [a for a in config_args.rl_script_args.action_space]
+
     for i in range(number_envs):
         env = gym.make(name_env)
         env.seed(
             int(1e9 * seed + i))  # to be sure to not have the same seeds as in the train (100h max ~ 100000 episodes done in our settings)
         envs.append(env)
-        if config_args.rl_script_args.modified_action_space:
-            subgoals.append(config_args.rl_script_args.new_action_space)
-        else:
-            subgoals.append(config_args.rl_script_args.action_space)
+        subgoals.append(list_actions)
     envs = ParallelEnv(envs)
 
     if config_args.rl_script_args.reward_shaping_beta == 0:
@@ -319,11 +322,14 @@ def main(config_args):
     else:
         if not config_args.rl_script_args.zero_shot:
             algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path,
-                              max_steps=number_envs * 4, number_epsiodes_test=config_args.rl_script_args.number_episodes)
-            algo.network.load_state_dict(torch.load()) # TODO add the loadding path
+                              max_steps=number_envs * 4,
+                              number_epsiodes_test=config_args.rl_script_args.number_episodes,
+                              saving_path=config_args.rl_script_args.saving_path_model + "/" + id_expe)
+            algo.load()
         else:
             algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path,
-                              max_steps=number_envs * 4)
+                              max_steps=number_envs * 4,
+                              saving_path=config_args.rl_script_args.saving_path_model + "/" + id_expe)
 
     run_agent(config_args.rl_script_args, algo, config_args.rl_script_args.saving_path_logs, id_expe)
     lm_server.close()

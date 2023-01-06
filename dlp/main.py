@@ -490,7 +490,8 @@ def main(config_args):
                                     config_args.rl_script_args.saving_path_logs, number_envs, subgoals, id_expe,
                                     config_args.rl_script_args.template_test)
     else:
-        algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path, max_steps=number_envs*4)
+        algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path, max_steps=number_envs*4,
+                          saving_path=config_args.rl_script_args.saving_path_model + "/" + id_expe, save_frequency=1)
     run_agent(config_args.rl_script_args, algo, id_expe)
     if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
         lm_server.close()
