@@ -278,11 +278,18 @@ class DRRN_Agent:
         return None, logs
 
     def load(self):
-        self.memory = pickle.load(open(self.saving_path + "/memory.pkl", 'rb'))
+        try:
+            with open(self.saving_path + "/memory.pkl", 'rb') as _file:
+                saved_memory = pickle.load(_file)
+            self.memory = saved_memory
+        except Exception as err:
+            print(f"Encountered the following exception when trying to load the memory, an empty memory will be used instead: {err}")
+
         self.network.load_state_dict(torch.load(self.saving_path + "/model.checkpoint"))
         self.optimizer.load_state_dict(torch.load(self.saving_path + "/optimizer.checkpoint"))
 
     def save(self):
         torch.save(self.network.state_dict(), self.saving_path + "/model.checkpoint")
         torch.save(self.optimizer.state_dict(), self.saving_path + "/optimizer.checkpoint")
-        pickle.dump(self.memory, open(self.saving_path + "/memory.pkl", 'wb'))
+        with open(self.saving_path + "/memory.pkl", 'wb') as _file:
+            pickle.dump(self.memory, _file)
