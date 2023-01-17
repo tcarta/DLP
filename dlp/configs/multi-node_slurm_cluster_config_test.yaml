@@ -46,9 +46,12 @@ rl_script_args:
   name_model: ???
   saving_path_model: ???
   name_environment: 'BabyAI-GoToLocal-v0'
+  nbr_obs: 3
   number_episodes: ???
   zero_shot: ???
   language: 'english'
   modified_action_space: false
   new_action_space: []
   spm_path: "$WORK/code/DLP/dlp/agents/drrn/spm_models/unigram_8k.model"
+  random_agent: false
+  get_example_trajectories: false

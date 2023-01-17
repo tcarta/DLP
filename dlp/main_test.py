@@ -23,6 +23,7 @@ from accelerate import Accelerator
 from main import ValueModuleFn
 
 from agents.drrn.drrn import DRRN_Agent
+from agents.random_agent.random_agent import Random_agent
 
 lamorel_init()
 logger = logging.getLogger(__name__)
@@ -196,20 +197,16 @@ class updater(BaseUpdater):
 
 
 def run_agent(args, algo, saving_path_logs, id_expe):
-    format_str = ("Language: {} | Name dict: {} | Episodes Done: {} | Reward: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) |\
-     Success Rate: {: .2f} | \nReshaped: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) | Bonus: {: .2f} +- {: .2f}\
+    if args.random_agent:
+        format_str = ("Language: {} | Name dict: {} | Episodes Done: {} | Reward: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) |\
+        Success Rate: {: .2f} |")
+    else:
+        format_str = ("Language: {} | Name dict: {} | Episodes Done: {} | Reward: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) |\
+        Success Rate: {: .2f} | \nReshaped: {: .2f} +- {: .2f}  (Min: {: .2f} Max: {: .2f}) | Bonus: {: .2f} +- {: .2f}\
                                  (Min: {: .2f} Max: {: .2f})")
 
     dm = dict_dict_modifier[args.language]
     for d, d_name in zip(dm, dict_modifier_name):
-        exps, logs = algo.generate_trajectories(d, args.language)
-
-        return_per_episode = utils.synthesize(logs["return_per_episode"])
-        success_per_episode = utils.synthesize(
-            [1 if r > 0 else 0 for r in logs["return_per_episode"]])
-        reshaped_return_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
-        reshaped_return_bonus_per_episode = utils.synthesize(logs["reshaped_return_bonus_per_episode"])
-        # num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
 
         if args.modified_action_space:
             d_name += '_'
@@ -219,21 +216,60 @@ def run_agent(args, algo, saving_path_logs, id_expe):
 
         if args.zero_shot:
             d_name += '_zero_shot'
-        data = [args.language, d_name, logs['episodes_done'], *return_per_episode.values(),
-                success_per_episode['mean'],
-                *reshaped_return_per_episode.values(),
-                *reshaped_return_bonus_per_episode.values()]
-
-        logger.info(Fore.YELLOW + format_str.format(*data) + Fore.RESET)
 
         test_path = os.path.join(os.path.join(saving_path_logs, id_expe), 'test')
         experiment_path = os.path.join(test_path, args.name_environment)
         path_test_folder = os.path.join(experiment_path, 'return_per_episode')
-        np_path = os.path.join(path_test_folder, d_name)
-        np.save(np_path, np.array(logs["return_per_episode"]))
-        """np.save(np_path+'_prompt', exps.prompt)
-        np.save(np_path+'_images', exps.images)
-        np.save(np_path+'_reward', exps.reward)"""
+
+
+        if args.get_example_trajectories:
+            nbr_frames = 0
+            k = 0
+            np_path = os.path.join(path_test_folder, 'trajectories')
+
+            status_path = os.path.join(path_test_folder, 'status.json')
+            if os.path.exists(status_path):
+                with open(status_path, 'r') as src:
+                    status = json.load(src)
+            else:
+                status = {'k': 0,
+                          'nbr_frames': 0}
+
+            while status['nbr_frames'] < args.num_steps:
+                exps, logs = algo.generate_trajectories(d, args.language)
+
+                np.save(np_path+'_prompts_{}'.format(status['k']), exps.prompts)
+                np.save(np_path+'_actions_{}'.format(status['k']), exps.actions)
+                np.save(np_path+'_values_{}'.format(status['k']), exps.vals)
+                status['nbr_frames'] += logs['nbr_frames']
+                status['k'] += 1
+
+                with open(status_path, 'w') as dst:
+                    json.dump(status, dst)
+        else:
+            exps, logs = algo.generate_trajectories(d, args.language)
+
+            return_per_episode = utils.synthesize(logs["return_per_episode"])
+            success_per_episode = utils.synthesize(
+                [1 if r > 0 else 0 for r in logs["return_per_episode"]])
+            if not args.random_agent:
+                reshaped_return_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
+                reshaped_return_bonus_per_episode = utils.synthesize(logs["reshaped_return_bonus_per_episode"])
+            # num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
+
+            if args.random_agent:
+                data = [args.language, d_name, logs['episodes_done'], *return_per_episode.values(),
+                    success_per_episode['mean']]
+            else:
+                data = [args.language, d_name, logs['episodes_done'], *return_per_episode.values(),
+                    success_per_episode['mean'],
+                    *reshaped_return_per_episode.values(),
+                    *reshaped_return_bonus_per_episode.values()]
+
+            logger.info(Fore.YELLOW + format_str.format(*data) + Fore.RESET)
+            np_path = os.path.join(path_test_folder, d_name)
+            np.save(np_path, np.array(logs["return_per_episode"]))
+
 
 
 # This will be overriden by lamorel's launcher if used
@@ -260,6 +296,9 @@ def main(config_args):
         id_expe += 'load_embedding_{}_'.format(config_args.rl_script_args.load_embedding) + \
                    'use_action_heads_{}_'.format(config_args.rl_script_args.use_action_heads)
 
+    if config_args.rl_script_args.nbr_obs != 3:
+        id_expe += 'nbr_obs_{}_'.format(config_args.rl_script_args.nbr_obs)
+
     id_expe += 'nbr_actions_{}_'.format(len(config_args.rl_script_args.action_space))
 
     # if config_args.rl_script_args.modified_action_space is not False we keep the same id_expe
@@ -278,9 +317,9 @@ def main(config_args):
     subgoals = []
     number_envs = config_args.rl_script_args.number_envs
     if config_args.rl_script_args.modified_action_space:
-        list_actions = [a for a in config_args.rl_script_args.new_action_space] # Should we replace "_"??
+        list_actions = [a.replace("_", " ") for a in config_args.rl_script_args.new_action_space]
     else:
-        list_actions = [a for a in config_args.rl_script_args.action_space]
+        list_actions = [a.replace("_", " ") for a in config_args.rl_script_args.action_space]
 
     for i in range(number_envs):
         env = gym.make(name_env)
@@ -320,16 +359,24 @@ def main(config_args):
         algo = test_llm.BaseAlgo(envs, lm_server, config_args.rl_script_args.number_episodes, reshape_reward,
                                  subgoals)
     else:
-        if not config_args.rl_script_args.zero_shot:
-            algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path,
-                              max_steps=number_envs * 4,
-                              number_epsiodes_test=config_args.rl_script_args.number_episodes,
-                              saving_path=config_args.rl_script_args.saving_path_model + "/" + id_expe)
-            algo.load()
+        if config_args.rl_script_args.random_agent:
+            algo = Random_agent(envs=envs,
+                                nbr_envs=number_envs,
+                                size_action_space=len(config_args.rl_script_args.action_space),
+                                number_episodes=config_args.rl_script_args.number_episodes)
+
         else:
-            algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path,
-                              max_steps=number_envs * 4,
-                              saving_path=config_args.rl_script_args.saving_path_model + "/" + id_expe)
+            if not config_args.rl_script_args.zero_shot:
+                algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path,
+                                  max_steps=number_envs * 4,
+                                  number_epsiodes_test=config_args.rl_script_args.number_episodes,
+                                  saving_path=config_args.rl_script_args.saving_path_model + "/" + id_expe)
+                algo.load()
+            else:
+                algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path,
+                                  max_steps=number_envs * 4,
+                                  number_epsiodes_test=config_args.rl_script_args.number_episodes,
+                                  saving_path=config_args.rl_script_args.saving_path_model + "/" + id_expe)
 
     run_agent(config_args.rl_script_args, algo, config_args.rl_script_args.saving_path_logs, id_expe)
     lm_server.close()

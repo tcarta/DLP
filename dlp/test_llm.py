@@ -76,6 +76,8 @@ class BaseAlgo(ABC):
 
         self.prompts = []
         self.images = []
+        self.actions = []
+        self.vals = []    # values
         # Initialize log values
 
         self.log_episode_return = torch.zeros(self.num_procs, device=self.device)
@@ -88,6 +90,7 @@ class BaseAlgo(ABC):
         self.log_reshaped_return = [0] * self.num_procs
         self.log_reshaped_return_bonus = [0] * self.num_procs
         self.log_num_frames = [0] * self.num_procs
+
 
     def generate_prompt_english(self, goal, subgoals, deque_obs, deque_actions):
 
@@ -190,33 +193,38 @@ class BaseAlgo(ABC):
             generate_prompt = self.generate_prompt_english
             subgoals = self.subgoals
         elif language == "french":
-            dico_traduc_act = {'turn_left': "tourner à gauche",
-                               "turn_right": "tourner à droite",
-                               "go_forward": "aller tout droit",
+            dico_traduc_act = {'turn left': "tourner à gauche",
+                               "turn right": "tourner à droite",
+                               "go forward": "aller tout droit",
+                               "pick up": "attraper",
+                               "drop": "lâcher",
+                               "toggle": "basculer",
                                "eat": "manger",
                                "dance": "dancer",
                                "sleep": "dormir",
-                               "do_nothing": "ne rien faire",
+                               "do nothing": "ne rien faire",
                                "cut": "couper",
                                "think": "penser"}
             generate_prompt = self.generate_prompt_french
             subgoals = [[BaseAlgo.prompt_modifier(sg, dico_traduc_act) for sg in sgs] for sgs in self.subgoals]
 
-
+        nbr_frames = self.num_procs
         pbar = tqdm(range(self.number_episodes), ascii=" " * 9 + ">", ncols=100)
         while self.log_done_counter < self.number_episodes:
             # Do one agent-environment interaction
-
+            nbr_frames += self.num_procs
             prompt = [BaseAlgo.prompt_modifier(generate_prompt(goal=self.obs[j]['mission'], subgoals=subgoals[j],
                                                            deque_obs=self.obs_queue[j],
                                                            deque_actions=self.acts_queue[j]), dict_modifier)
                       for j in range(self.num_procs)]
 
-            """self.prompts.append(prompt[0])
+
+            """
             self.images.append(self.env.render(mode="rgb_array"))"""
 
             output = self.lm_server.score(contexts=prompt, candidates=subgoals,
                                           additional_module_function_keys=['value'])
+            vals = torch.stack([_o["value"][0] for _o in output]).cpu().numpy()
             scores = torch.stack([_o["__score"] for _o in output])
             scores_max = torch.max(scores, dim=1)[0]
 
@@ -237,11 +245,14 @@ class BaseAlgo(ABC):
             a = action.cpu().numpy()
 
             for j in range(self.num_procs):
+                self.actions.append(subgoals[j][int(a[j])])
                 self.acts_queue[j].append(subgoals[j][int(a[j])])
 
             obs, reward, done, self.infos = self.env.step(a)
 
             for j in range(self.num_procs):
+                self.vals.append(vals[j][0])
+                self.prompts.append(prompt[j])
                 if done[j]:
                     # reinitialise memory of past observations and actions
                     self.obs_queue[j].clear()
@@ -295,17 +306,16 @@ class BaseAlgo(ABC):
         pbar.close()
 
         exps = DictList()
-        """exps.prompt = np.array(self.prompts)
-        exps.images = np.stack(self.images)
+        exps.prompts = np.array(self.prompts)
+        # exps.images = np.stack(self.images)
 
         # In commments below T is self.num_frames_per_proc, P is self.num_procs,
         # D is the dimensionality
 
         # for all tensors below, T x P -> P x T -> P * T
-        exps.action = self.actions.transpose(0, 1).reshape(-1)
+        exps.actions = np.array(self.actions)
 
-        exps.value = self.values.transpose(0, 1).reshape(-1)
-        exps.reward = np.array(self.rewards)"""
+        exps.vals = np.array(self.vals)
 
         # Log some values
 
@@ -317,6 +327,7 @@ class BaseAlgo(ABC):
             "reshaped_return_bonus_per_episode": self.log_reshaped_return_bonus[-keep:],
             "num_frames_per_episode": self.log_num_frames[-keep:],
             "episodes_done": self.log_done_counter,
+            "nbr_frames": nbr_frames
         }
 
         self.log_done_counter = 0

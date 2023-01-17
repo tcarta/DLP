@@ -15,12 +15,13 @@ import sentencepiece as spm
 import pickle
 
 import babyai.rl
-from dlp.test_llm import BaseAlgo
 
 # Accelerate
 from accelerate import Accelerator
+
 accelerator = Accelerator()
 device = accelerator.state.device
+
 
 class DRRN_Agent:
     def __init__(self, envs, subgoals, reshape_reward, spm_path, saving_path, gamma=0.9, batch_size=64, memory_size=5000000,
@@ -42,7 +43,7 @@ class DRRN_Agent:
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
 
         self.max_steps = max_steps
-        
+
         # Stateful env
         obs, infos = self.envs.reset()
         self.obs = obs
@@ -78,6 +79,86 @@ class DRRN_Agent:
         self.saving_path = saving_path
         self.__inner_counter = 0
 
+    def generate_prompt_english(self, goal, subgoals, deque_obs, deque_actions):
+
+        ldo = len(deque_obs)
+        lda = len(deque_actions)
+
+        head_prompt = "Possible action of the agent:"
+        for sg in subgoals:
+            head_prompt += " {},".format(sg)
+        head_prompt = head_prompt[:-1]
+
+        g = " \n Goal of the agent: {}".format(goal)
+        obs = ""
+        for i in range(ldo):
+            obs += " \n Observation {}: ".format(i)
+            for d_obs in deque_obs[i]:
+                obs += "{}, ".format(d_obs)
+            obs += "\n Action {}: ".format(i)
+            if i < lda:
+                obs += "{}".format(deque_actions[i])
+        return head_prompt + g + obs
+
+    def generate_prompt_french(self, goal, subgoals, deque_obs, deque_actions):
+
+        ldo = len(deque_obs)
+        lda = len(deque_actions)
+        head_prompt = "Actions possibles pour l'agent:"
+        for sg in subgoals:
+            head_prompt += " {},".format(sg)
+        head_prompt = head_prompt[:-1]
+
+        # translate goal in French
+        dico_traduc_det = {"the": "la",
+                           'a': 'une'}
+        dico_traduc_names = {"box": "boîte",
+                             "ball": "balle",
+                             "key": "clef"}
+        dico_traduc_adjs = {'red': 'rouge',
+                            'green': 'verte',
+                            'blue': 'bleue',
+                            'purple': 'violette',
+                            'yellow': 'jaune',
+                            'grey': 'grise'}
+
+        det = ''
+        name = ''
+        adj = ''
+
+        for k in dico_traduc_det.keys():
+            if k in goal:
+                det = dico_traduc_det[k]
+        for k in dico_traduc_names.keys():
+            if k in goal:
+                name = dico_traduc_names[k]
+        for k in dico_traduc_adjs.keys():
+            if k in goal:
+                adj = dico_traduc_adjs[k]
+        trad_goal = 'aller à ' + det + ' ' + name + ' ' + adj
+
+        g = " \n But de l'agent: {}".format(trad_goal)
+        obs = ""
+        for i in range(ldo):
+            obs += " \n Observation {}: ".format(i)
+            for d_obs in deque_obs[i]:
+                obs += "{}, ".format(d_obs)
+            obs += "\n Action {}: ".format(i)
+            if i < lda:
+                obs += "{}".format(deque_actions[i])
+        return head_prompt + g + obs
+
+    @classmethod
+    def prompt_modifier(cls, prompt: str, dict_changes: dict) -> str:
+        """use a dictionary of equivalence to modify the prompt accordingly
+        ex:
+        prompt= 'green box red box', dict_changes={'box':'tree'}
+        promp_modifier(prompt, dict_changes)='green tree red tree' """
+
+        for key, value in dict_changes.items():
+            prompt = prompt.replace(key, value)
+        return prompt
+
     def observe(self, state, act, rew, next_state, next_acts, done):
         # self.memory.push(state, act, rew, next_state, next_acts, done)     # When using ReplayMemory
         self.memory.push(False, state, act, rew, next_state, next_acts,
@@ -101,7 +182,6 @@ class DRRN_Agent:
 
         act_ids = [poss_acts[batch][idx] for batch, idx in enumerate(act_idxs)]
         return act_ids, act_idxs, act_values
-
 
     def update(self):
         if len(self.memory) < self.batch_size:
@@ -169,7 +249,8 @@ class DRRN_Agent:
                     self.obs_queue[j].append(infos[j]['descriptions'])
 
             next_prompts = [babyai.rl.PPOAlgoLlm.generate_prompt(goal=obs[j]['mission'], subgoals=self.subgoals[j],
-                                                                 deque_obs=self.obs_queue[j], deque_actions=self.acts_queue[j])
+                                                                 deque_obs=self.obs_queue[j],
+                                                                 deque_actions=self.acts_queue[j])
                             for j in range(self.n_envs)]
             next_states = self.build_state(next_prompts)
             for state, act, rew, next_state, next_poss_acts, done in \
@@ -197,31 +278,34 @@ class DRRN_Agent:
 
     def generate_trajectories(self, dict_modifier, language='english'):
         if language == "english":
-            generate_prompt = BaseAlgo.generate_prompt_english
+            generate_prompt = self.generate_prompt_english
             subgoals = self.subgoals
         elif language == "french":
-            dico_traduc_act = {'turn_left': "tourner à gauche",
-                               "turn_right": "tourner à droite",
-                               "go_forward": "aller tout droit",
+            dico_traduc_act = {'turn left': "tourner à gauche",
+                               "turn right": "tourner à droite",
+                               "go forward": "aller tout droit",
+                               "pick up": "attraper",
+                               "drop": "lâcher",
+                               "toggle": "basculer",
                                "eat": "manger",
                                "dance": "dancer",
                                "sleep": "dormir",
-                               "do_nothing": "ne rien faire",
+                               "do nothing": "ne rien faire",
                                "cut": "couper",
                                "think": "penser"}
-            generate_prompt = BaseAlgo.generate_prompt_french
-            subgoals = [[BaseAlgo.prompt_modifier(sg, dico_traduc_act) for sg in sgs] for sgs in self.subgoals]
+            generate_prompt = self.generate_prompt_french
+            subgoals = [[self.prompt_modifier(sg, dico_traduc_act) for sg in sgs] for sgs in self.subgoals]
 
         episodes_done = 0
         pbar = tqdm(range(self.number_episodes), ascii=" " * 9 + ">", ncols=100)
         while episodes_done < self.number_episodes:
             # Do one agent-environment interaction
             prompts = [
-                BaseAlgo.prompt_modifier(
-                    babyai.rl.PPOAlgoLlm.generate_prompt(goal=self.obs[j]['mission'],
-                                                         subgoals=self.subgoals[j],
-                                                         deque_obs=self.obs_queue[j],
-                                                         deque_actions=self.acts_queue[j]),
+                self.prompt_modifier(
+                    generate_prompt(goal=self.obs[j]['mission'],
+                                    subgoals=subgoals[j],
+                                    deque_obs=self.obs_queue[j],
+                                    deque_actions=self.acts_queue[j]),
                     dict_modifier)
                 for j in range(self.n_envs)]
             self.states = self.build_state(prompts)
@@ -259,19 +343,21 @@ class DRRN_Agent:
                     self.obs_queue[j].append(infos[j]['descriptions'])
 
             self.obs = obs
-            """next_prompts = [babyai.rl.PPOAlgoLlm.generate_prompt(goal=obs[j]['mission'], subgoals=self.subgoals[j],
-                                                                 deque_obs=self.obs_queue[j], deque_actions=self.acts_queue[j])
+            next_prompts = [self.prompt_modifier(generate_prompt(goal=obs[j]['mission'], subgoals=subgoals[j],
+                                                                 deque_obs=self.obs_queue[j],
+                                                                 deque_actions=self.acts_queue[j]),
+                                                 dict_modifier)
                             for j in range(self.n_envs)]
             next_states = self.build_state(next_prompts)
 
-            self.states = next_states"""
+            self.states = next_states
             # self.logs["num_frames"] += self.n_envs
         pbar.close()
 
         logs = {}
         for k, v in self.logs.items():
             if isinstance(v, list):
-                logs[k] = v[:-episodes_done]
+                logs[k] = v[:]
             else:
                 logs[k] = v
         logs["episodes_done"] = episodes_done

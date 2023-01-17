@@ -21,11 +21,11 @@ class PPOAlgoLlm(BaseAlgo):
                  entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5,
                  adam_eps=1e-5, clip_eps=0.2, epochs=4, batch_size=64,
                  reshape_reward=None, name_experiment=None, saving_path_model=None, saving_path_logs=None,
-                 number_envs=None, subgoals=None, id_expe=None, template_test=1, aux_info=None, debug=False):
+                 number_envs=None, subgoals=None, nbr_obs=3, id_expe=None, template_test=1, aux_info=None, debug=False):
         num_frames_per_proc = num_frames_per_proc or 128
 
         super().__init__(envs, lm_server, llm_scoring_module_key, num_frames_per_proc, discount, lr, gae_lambda,
-                         entropy_coef, value_loss_coef, max_grad_norm, reshape_reward, subgoals, aux_info)
+                         entropy_coef, value_loss_coef, max_grad_norm, reshape_reward, subgoals, nbr_obs, aux_info)
 
         self.nbr_llms = nbr_llms
 

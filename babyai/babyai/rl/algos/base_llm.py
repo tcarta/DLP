@@ -20,7 +20,7 @@ class BaseAlgo(ABC):
     """The base class for RL algorithms."""
 
     def __init__(self, envs, lm_server, llm_scoring_module_key, num_frames_per_proc, discount, lr, gae_lambda,
-                 entropy_coef, value_loss_coef, max_grad_norm, reshape_reward, subgoals, aux_info):
+                 entropy_coef, value_loss_coef, max_grad_norm, reshape_reward, subgoals, nbr_obs, aux_info):
         """
         Initializes a `BaseAlgo` instance.
         Parameters:
@@ -82,9 +82,9 @@ class BaseAlgo(ABC):
         self.num_frames = self.num_frames_per_proc * self.num_procs
 
         # Initialize experience values
-
-        self.obs_queue = [deque([], maxlen=3) for _ in range(self.num_procs)]
-        self.acts_queue = [deque([], maxlen=2) for _ in range(self.num_procs)]
+        self.nbr_obs = nbr_obs
+        self.obs_queue = [deque([], maxlen=self.nbr_obs) for _ in range(self.num_procs)]
+        self.acts_queue = [deque([], maxlen=self.nbr_obs-1) for _ in range(self.num_procs)]
         self.subgoals = subgoals
 
         shape = (self.num_frames_per_proc, self.num_procs)

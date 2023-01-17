@@ -271,6 +271,21 @@ colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey']
 # plot_entropy_average(df, regexs, labels, limits, colors)
 # plot_value_loss_average(df, regexs, labels, limits, colors)
 
+# ####################### Performance function of the size of the prompt ######################## #
+# ####################### GoToLocation env ######################## #
+# ####################### LLM_large ######################## #
+regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_obs_1_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_obs_6_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
+          '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_obs_9_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
+
+# labels = ['Full pretrained & scoring', 'Full pretrained & action head', 'Not pretrained & action head', 'Pretrained embedding & scoring', 'Pretrained embedding & action head']
+
+labels = ['1 observation', '3 observations', '6 observations', '9 observations']
+limits = 400000
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
+# plot_average(df, regexs, labels, limits, colors)
+plot_sucess_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### Performance function of the size of the LLM ######################## #
 # ####################### GoToLocation env ######################## #

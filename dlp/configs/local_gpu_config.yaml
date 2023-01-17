@@ -23,7 +23,7 @@ rl_script_args:
   path: ???
   seed: 0
   number_envs: 2
-  num_steps: 1000
+  num_steps: 10000
   max_episode_steps: 3
   simplification_str: easy
   frames_per_proc: 40
@@ -45,13 +45,16 @@ rl_script_args:
   name_experiment: 'llm_mtrl'
   name_model: 'T5small'
   saving_path_model: '/home/tcarta/DLP/storage/models'
-  name_environment: 'BabyAI-MixtTestLocal-v0'
-  number_episodes: 10
-  language: 'english'
+  name_environment: 'BabyAI-GoToFrench-v0'
+  number_episodes: 100
+  language: 'french'
   load_embedding: false
   use_action_heads: false
   template_test: 1
   zero_shot: false
   modified_action_space: false
-  new_action_space: ["shift_left","shift_right","go_ahead","take","release","turn"]
+  new_action_space: ["rotate_left","rotate_right","move_ahead","take","release","switch"]
   spm_path: "/home/tcarta/DLP/dlp/agents/drrn/spm_models/unigram_8k.model"
+  random_agent: false
+  get_example_trajectories: false
+  nbr_obs: 3

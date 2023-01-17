@@ -431,6 +431,9 @@ def main(config_args):
     if config_args.rl_script_args.use_action_heads:
         id_expe += 'use_action_heads_{}_'.format(config_args.rl_script_args.use_action_heads)
 
+    if config_args.rl_script_args.nbr_obs != 3:
+        id_expe += 'nbr_obs_{}_'.format(config_args.rl_script_args.nbr_obs)
+
     id_expe += 'nbr_actions_{}_'.format(len(config_args.rl_script_args.action_space))
 
     for a in config_args.rl_script_args.action_space:
@@ -487,7 +490,8 @@ def main(config_args):
                                     reshape_reward,
                                     config_args.rl_script_args.name_experiment,
                                     config_args.rl_script_args.saving_path_model,
-                                    config_args.rl_script_args.saving_path_logs, number_envs, subgoals, id_expe,
+                                    config_args.rl_script_args.saving_path_logs, number_envs, subgoals,
+                                    config_args.rl_script_args.nbr_obs, id_expe,
                                     config_args.rl_script_args.template_test)
     else:
         algo = DRRN_Agent(envs, subgoals, reshape_reward, config_args.rl_script_args.spm_path, max_steps=number_envs*4,
