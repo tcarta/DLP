@@ -184,16 +184,23 @@ dict_dict_modifier = {'english': dict_modifier_english, 'french': dict_modifier_
 class updater(BaseUpdater):
     def perform_update(self, contexts, candidates, _current_batch_ids, **kwargs):
         if not hasattr(self, "is_loaded"):
-            try:
+
+            if "im_learning" in kwargs:
                 self._llm_module.load_state_dict(torch.load(kwargs["saving_path_model"] +
-                                                            "/" + kwargs["id_expe"] + "/last/model.checkpoint"))
+                                                            "/" + kwargs["id_expe"] + "/model.checkpoint"))
                 self.is_loaded = True
-                print("Last")
-            except:
-                self._llm_module.load_state_dict(torch.load(kwargs["saving_path_model"] +
-                                                            "/" + kwargs["id_expe"] + "/backup/model.checkpoint"))
-                self.is_loaded = True
-                print("Backup")
+                print("im")
+            else:
+                try:
+                    self._llm_module.load_state_dict(torch.load(kwargs["saving_path_model"] +
+                                                                "/" + kwargs["id_expe"] + "/last/model.checkpoint"))
+                    self.is_loaded = True
+                    print("Last")
+                except:
+                    self._llm_module.load_state_dict(torch.load(kwargs["saving_path_model"] +
+                                                                "/" + kwargs["id_expe"] + "/backup/model.checkpoint"))
+                    self.is_loaded = True
+                    print("Backup")
 
 
 def run_agent(args, algo, saving_path_logs, id_expe):
@@ -216,6 +223,9 @@ def run_agent(args, algo, saving_path_logs, id_expe):
 
         if args.zero_shot:
             d_name += '_zero_shot'
+
+        if args.im_learning:
+            d_name -= '_im'
 
         test_path = os.path.join(os.path.join(saving_path_logs, id_expe), 'test')
         experiment_path = os.path.join(test_path, args.name_environment)
@@ -247,7 +257,7 @@ def run_agent(args, algo, saving_path_logs, id_expe):
                 with open(status_path, 'w') as dst:
                     json.dump(status, dst)
         else:
-            exps, logs = algo.generate_trajectories(d, args.language)
+            exps, logs = algo.generate_trajectories(d, args.language, args.im_learning)
 
             return_per_episode = utils.synthesize(logs["return_per_episode"])
             success_per_episode = utils.synthesize(
@@ -284,7 +294,10 @@ def main(config_args):
 
     # lm server
     if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
-        lm_server = Caller(config_args.lamorel_args, custom_updater_class=updater,
+        if config_args.rl_script_args.im_learning:
+            lm_server = Caller(config_args.lamorel_args, custom_updater_class=updater)
+        else:
+            lm_server = Caller(config_args.lamorel_args, custom_updater_class=updater,
                            custom_module_functions={'value': ValueModuleFn(config_args.lamorel_args.llm_args.model_type)})
 
     id_expe = config_args.rl_script_args.name_experiment + \
@@ -352,7 +365,12 @@ def main(config_args):
 
     if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
         if not config_args.rl_script_args.zero_shot:
-            lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+            if config_args.rl_script_args.im_learning:
+                lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                             [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
+                             im_learning=True, saving_path_model=config_args.rl_script_args.im_path.format(config_args.rl_script_args.seed))
+            else:
+                lm_server.update([None for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
                              [[None] for _ in range(config_args.lamorel_args.distributed_setup_args.n_llm_processes)],
                              id_expe=id_expe, saving_path_model=config_args.rl_script_args.saving_path_model)
 
