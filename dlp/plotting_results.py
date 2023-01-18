@@ -145,7 +145,7 @@ def plot_average(*args, **kwargs):
     plt.show()
 
 
-def plot_sucess_rate_average(*args, **kwargs):
+def plot_success_rate_average(*args, **kwargs):
     """Plot averages over groups of runs  defined by regular expressions."""
     plt.figure(figsize=(7.5, 5))
     plot_average_impl(y_value='success_rate', *args, **kwargs)
@@ -235,7 +235,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5', 'DRRN', 'Symbolic-PPO']
 limits = 1500000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey']
 plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+plot_success_rate_average(df, regexs, labels, limits, colors)
 
 regexs = ['.*llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
 labels = ['FLAN-T5-large']
@@ -256,7 +256,7 @@ labels = ['DRRN_3 actions', 'Symbolic-PPO_GTRB']
 limits = 400000
 colors = ['tab:blue', 'tab:orange']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### Performance function of the pretrainning ######################## #
 # ####################### GoToLocation env ######################## #
@@ -274,7 +274,7 @@ labels = ['GFLAN-T5', 'AFLAN-T5', 'NPAE-FLAN-T5', 'NPA-FLAN-T5', 'NPE-FLAN-T5']
 limits = 500000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey']
 # plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+plot_success_rate_average(df, regexs, labels, limits, colors)
 # plot_entropy_average(df, regexs, labels, limits, colors)
 # plot_value_loss_average(df, regexs, labels, limits, colors)
 
@@ -292,7 +292,7 @@ labels = ['GFLAN-T5-xl', 'GFLAN-T5-large', 'GFLAN-T5-small', 'NPAE-FLAN-T5-large
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey', 'tab:pink']
 # plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+plot_success_rate_average(df, regexs, labels, limits, colors)
 
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xl_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -314,7 +314,7 @@ labels = ['FLAN-T5-large', 'GPT2-large']
 limits = 400000
 colors = ['tab:blue', 'tab:orange']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 # plot_entropy_average(df, regexs, labels, limits, colors)
 
 
@@ -332,7 +332,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### 6 actions ######################## #
 
@@ -344,7 +344,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### 9 actions ######################## #
 
@@ -356,7 +356,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### LLM_mixt ######################## #
 
@@ -371,7 +371,7 @@ labels = ['GFLAN-T5-large 3 actions', 'GFLAN-T5-large 6 actions', 'GFLAN-T5-larg
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey', 'tab:purple', 'tab:pink']
 # plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### SE ######################## #
 
@@ -409,7 +409,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### 8 distractors ######################## #
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -421,7 +421,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### 16 distractors ######################## #
 regexs = ['.*llm_gtl_distractor_16_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -433,7 +433,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5-large', 'DRRN', 'Symbolic-PPO']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### Mixt ######################## #
 regexs = ['.*llm_gtl_distractor_4_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
@@ -446,7 +446,7 @@ labels = ['GFLAN-T5-large 4 distractors', 'GFLAN-T5-large 8 distractors', 'GFLAN
           'Symbolic-PPO 4 distractors', 'Symbolic-PPO 8 distractors', 'Symbolic-PPO 16 distractors']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:grey', 'tab:green', 'tab:purple', 'tab:pink']
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### SE ######################## #
 

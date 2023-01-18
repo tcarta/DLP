@@ -141,7 +141,7 @@ def plot_average(*args, **kwargs):
     plt.show()
 
 
-def plot_sucess_rate_average(*args, **kwargs):
+def plot_success_rate_average(*args, **kwargs):
     """Plot averages over groups of runs  defined by regular expressions."""
     plt.figure(figsize=(7.5, 5))
     plot_average_impl(y_value='success_rate', *args, **kwargs)
@@ -228,7 +228,7 @@ labels = ['GFLAN-T5-large', 'NPAE-FLAN-T5', 'DRRN', 'Symbolic-PPO']
 limits = 1500000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:grey']
 # plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+plot_success_rate_average(df, regexs, labels, limits, colors)
 
 regexs = ['.*llm_mtrl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*']
 labels = ['FLAN-T5-large']
@@ -249,7 +249,7 @@ labels = ['DRRN_3 actions', 'Symbolic-PPO_GTRB']
 limits = 400000
 colors = ['tab:blue', 'tab:orange']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### Performance function of the pretrainning ######################## #
 # ####################### GoToLocation env ######################## #
@@ -267,7 +267,7 @@ labels = ['GFLAN-T5', 'AFLAN-T5', 'NPAE-FLAN-T5', 'NPA-FLAN-T5', 'NPE-FLAN-T5']
 limits = 500000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+plot_success_rate_average(df, regexs, labels, limits, colors)
 # plot_entropy_average(df, regexs, labels, limits, colors)
 # plot_value_loss_average(df, regexs, labels, limits, colors)
 
@@ -285,7 +285,7 @@ labels = ['1 observation', '3 observations', '6 observations', '9 observations']
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple']
 # plot_average(df, regexs, labels, limits, colors)
-plot_sucess_rate_average(df, regexs, labels, limits, colors)
+plot_success_rate_average(df, regexs, labels, limits, colors)
 
 # ####################### Performance function of the size of the LLM ######################## #
 # ####################### GoToLocation env ######################## #
@@ -300,7 +300,7 @@ labels = ['GFLAN-T5-xl', 'GFLAN-T5-large', 'GFLAN-T5-small', 'NPAE-FLAN-T5-large
 limits = 400000
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:grey', 'tab:pink']
 # plot_average(df, regexs, labels, limits, colors)
-# plot_sucess_rate_average(df, regexs, labels, limits, colors)
+# plot_success_rate_average(df, regexs, labels, limits, colors)
 
 regexs = ['.*llm_gtl_nbr_env_32_Flan_T5xl_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
           '.*llm_gtl_nbr_env_32_Flan_T5large_pretrained_True_nbr_actions_6_turn_left_turn_right_go_forward_pick_up_drop_toggle_shape_reward_beta_0.*',
