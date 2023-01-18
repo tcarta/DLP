@@ -187,7 +187,7 @@ class updater(BaseUpdater):
         if not hasattr(self, "is_loaded"):
 
             if "im_learning" in kwargs:
-                self._llm_module.load_state_dict(torch.load(kwargs["saving_path_model"] + "/model.checkpoint"))
+                self._llm_module.module._LLM_model.load_state_dict(torch.load(kwargs["saving_path_model"] + "/model.checkpoint"))
                 self.is_loaded = True
                 print("im")
             else:
