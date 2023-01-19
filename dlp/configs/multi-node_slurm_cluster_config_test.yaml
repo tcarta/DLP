@@ -54,4 +54,7 @@ rl_script_args:
   new_action_space: []
   spm_path: "$WORK/code/DLP/dlp/agents/drrn/spm_models/unigram_8k.model"
   random_agent: false
+  im_learning: false
+  im_path: "/gpfswork/rech/imi/ucy39hi/DLP/storage/logs/clm_finetuning_FLan_T5large"
   get_example_trajectories: false
+  bot: false
