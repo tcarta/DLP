@@ -172,7 +172,7 @@ class BaseAlgo(ABC):
             prompt = prompt.replace(key, value)
         return prompt
 
-    def generate_trajectories(self, dict_modifier, language='english', debug=False):
+    def generate_trajectories(self, dict_modifier, language='english', im_learning=False, debug=False):
         """Generates trajectories and calculates relevant metrics.
         Runs several environments concurrently.
         Returns
@@ -222,9 +222,12 @@ class BaseAlgo(ABC):
             """
             self.images.append(self.env.render(mode="rgb_array"))"""
 
-            output = self.lm_server.score(contexts=prompt, candidates=subgoals,
+            if im_learning:
+                output = self.lm_server.score(contexts=prompt, candidates=subgoals)
+            else:
+                output = self.lm_server.score(contexts=prompt, candidates=subgoals,
                                           additional_module_function_keys=['value'])
-            vals = torch.stack([_o["value"][0] for _o in output]).cpu().numpy()
+                vals = torch.stack([_o["value"][0] for _o in output]).cpu().numpy()
             scores = torch.stack([_o["__score"] for _o in output])
             scores_max = torch.max(scores, dim=1)[0]
 
@@ -251,7 +254,8 @@ class BaseAlgo(ABC):
             obs, reward, done, self.infos = self.env.step(a)
 
             for j in range(self.num_procs):
-                self.vals.append(vals[j][0])
+                if not im_learning:
+                    self.vals.append(vals[j][0])
                 self.prompts.append(prompt[j])
                 if done[j]:
                     # reinitialise memory of past observations and actions
