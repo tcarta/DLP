@@ -387,7 +387,6 @@ def main(config_args):
 
         algo = test_llm.BaseAlgo(envs, lm_server, config_args.rl_script_args.number_episodes, reshape_reward,
                                  subgoals)
-        lm_server.close()
     else:
         if config_args.rl_script_args.random_agent:
             algo = Random_agent(envs=envs,
@@ -412,6 +411,8 @@ def main(config_args):
                                   saving_path=config_args.rl_script_args.saving_path_model + "/" + id_expe)
 
     run_agent(config_args.rl_script_args, algo, config_args.rl_script_args.saving_path_logs, id_expe)
+    if config_args.lamorel_args.distributed_setup_args.n_llm_processes > 0:
+        lm_server.close()
 
 
 if __name__ == '__main__':

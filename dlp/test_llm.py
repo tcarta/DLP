@@ -224,11 +224,12 @@ class BaseAlgo(ABC):
 
             if im_learning:
                 output = self.lm_server.score(contexts=prompt, candidates=subgoals)
+                scores = torch.stack(output)
             else:
                 output = self.lm_server.score(contexts=prompt, candidates=subgoals,
                                           additional_module_function_keys=['value'])
                 vals = torch.stack([_o["value"][0] for _o in output]).cpu().numpy()
-            scores = torch.stack([_o["__score"] for _o in output])
+                scores = torch.stack([_o["__score"] for _o in output])
             scores_max = torch.max(scores, dim=1)[0]
 
             proba_dist = []
