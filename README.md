@@ -21,7 +21,7 @@ cd gym-minigrid; pip install -e.; cd ..
 ```
 6. Install Accelerate
 ```
-cd v0.13.2/accelerate-0.13.2; pip install -e .; cd ..
+cd v0.13.2/accelerate-0.13.2; pip install -e .; cd ../..
 ```
 7. Install Lamorel
 ```

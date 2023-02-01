@@ -17,4 +17,4 @@ imageio
 wandb
 ipython
 tqdm==4.64.0
-
+datasets

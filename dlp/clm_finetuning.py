@@ -18,9 +18,9 @@ from copy import deepcopy
 import os
 
 
-def load_dataset(dir, file_id):
-    _inputs = np.load(f"{dir}/trajectories_prompts_{file_id}.npy")
-    _outputs = np.load(f"{dir}/trajectories_actions_{file_id}.npy")
+def load_dataset(dir, file_name, file_id):
+    _inputs = np.load(f"{dir}/{file_name}_prompts_{file_id}.npy")
+    _outputs = np.load(f"{dir}/{file_name}_actions_{file_id}.npy")
 
     _train_dataset = Dataset.from_dict({
         "input": _inputs[:400000],
@@ -115,7 +115,7 @@ def evaluate(model, eval_dataloader, config):
 
 def launch_training(args):
     torch.cuda.set_device(accelerator.device)
-    raw_datasets = load_dataset(args.data_dir, args.file_id)
+    raw_datasets = load_dataset(args.data_dir, args.file_name, args.file_id)
     tokenizer = AutoTokenizer.from_pretrained(args.model_dir)
     model = AutoModelForSeq2SeqLM.from_pretrained(args.model_dir)
     processed_datasets = tokenize_dataset(raw_datasets, tokenizer)
@@ -148,7 +148,7 @@ def launch_training(args):
                                   batch_size=config["per_device_batch_size"])
     eval_dataloader = DataLoader(processed_datasets["test"], collate_fn=default_data_collator,
                                  batch_size=config["per_device_batch_size"])
-    n_train_steps = config["n_epochs"] * len(processed_datasets["train"])
+    n_train_steps = len(processed_datasets["train"]) / updates_batch_size * config["n_epochs"]
 
     # Prepare the optimizer and learning rate scheduler
     optimizer = AdamW(get_grouped_params(model, config), lr=config["learning_rate"], eps=1e-8)
@@ -175,7 +175,7 @@ def launch_training(args):
                 print(f"Input size: {len(input_ids)}")
             attention_mask = torch.tensor(batch["attention_mask"])
             labels = torch.tensor(batch["labels"])
-            labels[labels == tokenizer.pad_token_id] = -100
+            # labels[labels == tokenizer.pad_token_id] = -100
             loss = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).loss
             log_metrics(logger, tb_writer, step, {'lr': get_lr(), 'samples': step * config["full_batch_size"],
                                                   'steps': completed_steps, 'loss/train': loss.item()})
@@ -212,6 +212,11 @@ if __name__ == '__main__':
     parser.add_argument(
         "--data_dir",
         type=str
+    )
+    parser.add_argument(
+        "--file_name",
+        type=str,
+        default="trajectories"
     )
     parser.add_argument(
         "--file_id",

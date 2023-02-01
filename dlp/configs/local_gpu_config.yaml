@@ -21,9 +21,9 @@ lamorel_args:
   updater_args:
 rl_script_args:
   path: ???
-  seed: 0
+  seed: 1
   number_envs: 2
-  num_steps: 10000
+  num_steps: 1000
   max_episode_steps: 3
   simplification_str: easy
   frames_per_proc: 40
@@ -45,10 +45,10 @@ rl_script_args:
   name_experiment: 'llm_mtrl'
   name_model: 'T5small'
   saving_path_model: '/home/tcarta/DLP/storage/models'
-  name_environment: 'BabyAI-GoToFrench-v0'
-  number_episodes: 100
-  language: 'french'
-  load_embedding: false
+  name_environment: 'BabyAI-MixtTestLocal-v0'
+  number_episodes: 10
+  language: 'english'
+  load_embedding: true
   use_action_heads: false
   template_test: 1
   zero_shot: false
@@ -58,3 +58,5 @@ rl_script_args:
   random_agent: false
   get_example_trajectories: false
   nbr_obs: 3
+  im_learning: true
+  im_path: ""
